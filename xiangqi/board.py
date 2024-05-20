@@ -489,6 +489,23 @@ class Board:
         self.next_turn = 1 - self.next_turn
         return removed
 
+    def restore(self, src_row, src_col, dst_row, dst_col, removed_piece):
+        moved_piece = self.pos_to_piece[(dst_row, dst_col)]
+        self.pos_to_piece[(src_row, src_col)] = moved_piece
+        self.board_matrix[src_row, src_col] = moved_piece.color * 10 + moved_piece.get_cid()
+        moved_piece.row = src_row
+        moved_piece.col = src_col
+
+        self.pos_to_piece[(dst_row, dst_col)] = removed_piece
+        if removed_piece is not None:
+            self.board_matrix[dst_row, dst_col] = removed_piece.color * 10 + removed_piece.get_cid()
+            self.pieces.append(removed_piece)
+        else:
+            self.board_matrix[dst_row, dst_col] = 0
+
+        self.next_turn = 1 - self.next_turn
+
+
     def get_result(self):
         prev_turn = 1 - self.next_turn
         if prev_turn == 0 and self.jiangblack not in self.pieces:
