@@ -25,6 +25,29 @@ class Piece:
         }
         return cid_dict[self.category]
 
+    def get_char(self):
+        char_dict = {
+            0: {
+                'ju':'俥',
+                'ma':'傌',
+                'xiang':'相',
+                'shi':'仕',
+                'jiang':'帥',
+                'pao':'炮',
+                'zu':'兵'
+            },
+            1: {
+                'ju': '車',
+                'ma': '馬',
+                'xiang': '象',
+                'shi': '士',
+                'jiang': '将',
+                'pao': '砲',
+                'zu': '卒'
+            }
+        }
+        return char_dict[self.color][self.category]
+
 
 class Board:
     def __init__(self, first_turn=0):
@@ -116,6 +139,18 @@ class Board:
         board_ = self.board_matrix.reshape(-1)
         state = ''.join(['0' * (1 - b // 10) + str(b) for b in board_]) + '|' + str(self.next_turn)
         return state
+
+    def show_board(self):
+        show = ''
+        for i in range(nrow):
+            for j in range(ncol):
+                piece = self.pos_to_piece[(i, j)]
+                if piece is None:
+                    show += '　'
+                else:
+                    show += piece.get_char()
+            show += '\n'
+        print(show)
 
     def check_jiang_facing(self, moving_piece, dst_pos):
         jiang_red, jiang_black = self.pieces[:2]
@@ -326,12 +361,12 @@ class Board:
                     if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
                         destinies_.append(pos)
                 # upper
-                if piece.row > 0 or piece.row > 7:
+                if (piece.row > 0 and piece.color == 1) or (piece.row > 7 and piece.color == 0):
                     pos = (piece.row - 1, piece.col)
                     if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
                         destinies_.append(pos)
                 # lower
-                if piece.row < 0 or piece.row < 9:
+                if (piece.row < 0 and piece.color == 1) or (piece.row < 9 and piece.color == 0):
                     pos = (piece.row + 1, piece.col)
                     if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
                         destinies_.append(pos)
@@ -442,7 +477,9 @@ class Board:
         dst_piece = self.pos_to_piece[(dst_row, dst_col)]
         if dst_piece is not None:
             dst_index = self.pieces.index(dst_piece)
-            self.pieces.pop(dst_index)
+            removed = self.pieces.pop(dst_index)
+        else:
+            removed = None
         self.pos_to_piece[(src_row, src_col)] = None
         self.pos_to_piece[(dst_row, dst_col)] = src_piece
         self.board_matrix[dst_row, dst_col] = src_piece.color * 10 + src_piece.get_cid()
@@ -450,6 +487,7 @@ class Board:
         src_piece.row = dst_row
         src_piece.col = dst_col
         self.next_turn = 1 - self.next_turn
+        return removed
 
     def get_result(self):
         prev_turn = 1 - self.next_turn

@@ -1,5 +1,9 @@
+import random
+
 import torch.nn
+import json
 import agent
+import board
 import model
 import dataset
 from torch import optim
@@ -33,25 +37,35 @@ device = torch.device('mps')
 model_.to(device)
 
 train_cnt = 1000
-play_cnt = 200
+train_epoch = 2
+play_cnt = 100
 folder = '/Users/zx/Documents/rl-exp/xiangqi/resources'
 model_files = os.listdir(folder)
 model_files = [f for f in model_files if f.endswith('.pt')]
-versions = [int(f.split('.')[-2]) for f in model_files]
-latest_version = max(versions)
+if len(model_files) > 0:
+    versions = [int(f.split('.')[-2]) for f in model_files]
+    latest_version = max(versions)
+else:
+    latest_version = -1
 
 
 for i in range(train_cnt):
     if i <= latest_version:
         continue
     print(f'playing {i}')
-    stat_file = f'{folder}/stat.{i}.json'
+    stat_file = f'{folder}/stat.json'
     if i == 0:
-        agent_ = agent.Agent(model=None, epsilon=.7, play_cnt=play_cnt, stat_file=stat_file)
+        agent_ = agent.Agent(model=None, epsilon=.7, stat_file=stat_file)
     else:
-        agent_ = agent.Agent(model=model_, epsilon=.7, play_cnt=play_cnt, stat_file=stat_file)
-    agent_.play()
+        agent_ = agent.Agent(model=model_, epsilon=.7, stat_file=stat_file)
+    for j in tqdm(range(play_cnt)):
+        board_ = board.Board(first_turn=random.choice([0, 1]))
+        agent_.self_play(board_, 0, show_board=False)
 
+    with open(agent_.stat_file, 'w') as f:
+        f.write(json.dumps(agent_.stat, indent=4))
     print(f'training')
-    train_model(stat_file, batch_size=2, device=device)
+    for j in range(train_epoch):
+        print(f'epoch {j}')
+        train_model(stat_file, batch_size=4, device=device)
     torch.save(model_.state_dict(), f'{folder}/evaluator.{i}.pt')

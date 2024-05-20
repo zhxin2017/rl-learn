@@ -23,9 +23,8 @@ class Ds(Dataset):
 
     def __getitem__(self, item):
         state_str = self.state_strs[item]
-        stat_ = self.stat[state_str]
-        stat_sum = sum(stat_.values())
-        probs = torch.tensor([stat_['0'], stat_['1'], stat_['2']]) / stat_sum
+        stat_ = torch.tensor(self.stat[state_str]).sum(dim=0)
+        probs = stat_ / stat_.sum()
         category, color, next_turn = parse_state(state_str)
         return category, color, next_turn, probs
 

@@ -26,11 +26,8 @@ class Game:
 
     def agent_step(self):
         (src_row, src_col, dst_row, dst_col), prob = self.agent.act(self.board)
-        moving = self.board.pos_to_piece[(src_row, src_col)]
-        print(moving.category)
-        print('win prob', prob)
         self.board.move(src_row, src_col, dst_row, dst_col)
-        return src_row, src_col, dst_row, dst_col
+        return src_row, src_col, dst_row, dst_col, prob
 
     def person_step(self):
         move_str = input('input move str:\n')
@@ -39,27 +36,45 @@ class Game:
             src_row, src_col, dst_row, dst_col = (int(s) for s in sub_move_str)
             self.board.move(src_row, src_col, dst_row, dst_col)
 
-    def play(self):
+    def play(self, agent_first=False):
         while True:
             print('-------------------')
-            self.person_step()
-            result = self.board.get_result()
-            if result < 3:
-                print(result)
-                break
-            print(self.agent_step())
-            result = self.board.get_result()
-            if result < 3:
-                print(result)
-                break
+            if agent_first:
+                src_row, src_col, dst_row, dst_col, prob = self.agent_step()
+                self.board.show_board()
+                print(f'{self.board.pos_to_piece[(dst_row, dst_col)].get_char()} {src_row}{src_col}'
+                      f'---->{dst_row}{dst_col} win prob {prob:.4f}')
+                result = self.board.get_result()
+                if result < 3:
+                    print(result)
+                    break
+                self.person_step()
+                result = self.board.get_result()
+                if result < 3:
+                    print(result)
+                    break
+            else:
+                self.person_step()
+                result = self.board.get_result()
+                if result < 3:
+                    print(result)
+                    break
+                self.board.show_board()
+                src_row, src_col, dst_row, dst_col, prob = self.agent_step()
+                print(f'{self.board.pos_to_piece[(dst_row, dst_col)].get_char()} {src_row}{src_col}'
+                      f'---->{dst_row}{dst_col} win prob {prob:.4f}')
+                result = self.board.get_result()
+                if result < 3:
+                    print(result)
+                    break
 
 
 if __name__ == '__main__':
-    first_turn = int(sys.argv[1])
+    # first_turn = int(sys.argv[1])
     model_ = model.Evaluator(12, 256)
     device = torch.device('mps')
-    model_.load_state_dict(torch.load('/Users/zx/Documents/rl-exp/xiangqi/evaluator.16.pt'))
+    model_.load_state_dict(torch.load('/Users/zx/Documents/rl-exp/xiangqi/resources/evaluator.3.pt'))
     model_.to(device)
     agent_ = agent.Agent(model_, device=device)
-    game = Game(agent_, first_turn=first_turn)
-    game.play()
+    game = Game(agent_, first_turn=0)
+    game.play(agent_first=True)
