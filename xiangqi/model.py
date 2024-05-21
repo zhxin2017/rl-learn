@@ -18,18 +18,18 @@ class Evaluator(nn.Module):
             self.encoder_layers.append(encoder_layer)
         self.result_reg = nn.Linear(dmodel, 3)
 
-    def forward(self, category, color, turn):
-        b = category.shape[0]
-        category_emb = self.category_emb_m(category)
+    def forward(self, cid, color, turn):
+        b = cid.shape[0]
+        category_emb = self.category_emb_m(cid)
         color_emb = self.color_emb_m(color)
-        color_mask = category > 0
+        color_mask = cid > 0
         color_emb = color_emb * color_mask.view(b, 10, 9, 1)
         turn_emb = self.turn_emb_m(turn).view(b, 1, -1)
         x = category_emb + color_emb
         x = x.view(b, 90, -1)
-        pos_emb = self.pos_emb_m(torch.arange(90, device=category.device)).view(1, 90, -1)
+        pos_emb = self.pos_emb_m(torch.arange(90, device=cid.device)).view(1, 90, -1)
         x = x + pos_emb
-        result_query = self.result_query_emb_m(torch.zeros([b], dtype=torch.int, device=category.device)).view(b, 1, -1)
+        result_query = self.result_query_emb_m(torch.zeros([b], dtype=torch.int, device=cid.device)).view(b, 1, -1)
         result_query = result_query + turn_emb
         x = torch.concat([x, result_query], dim=1)
         for enc in self.encoder_layers:

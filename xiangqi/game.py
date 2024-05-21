@@ -50,6 +50,7 @@ class Game:
                     break
             else:
                 self.person_step()
+                self.board.show_board()
                 result = self.board.get_result()
                 if result < 3:
                     print(result)
@@ -66,19 +67,19 @@ class Game:
                     break
             else:
                 self.person_step()
+                self.board.show_board()
                 result = self.board.get_result()
                 if result < 3:
                     print(result)
                     break
 
 
-
 if __name__ == '__main__':
     # first_turn = int(sys.argv[1])
     model_ = model.Evaluator(12, 256)
     device = torch.device('mps')
-    model_.load_state_dict(torch.load('/Users/zx/Documents/rl-exp/xiangqi/resources/evaluator.0.pt'))
+    model_.load_state_dict(torch.load('/Users/zx/Documents/rl-exp/xiangqi/resources/evaluator.4.pt'))
     model_.to(device)
     agent_ = agent.Agent(model_, device=device)
     game = Game(agent_, first_turn=0)
-    game.play(mode='aa')
+    game.play(mode='pa')

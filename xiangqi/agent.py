@@ -52,7 +52,7 @@ class Agent:
 
                 next_turn_ = torch.tensor([board.next_turn], dtype=torch.int, device=self.device).view(1, 1)
                 with torch.no_grad():
-                    probs = torch.nn.functional.softmax(self.model(category, color, next_turn_))[0]
+                    probs = torch.nn.functional.softmax(self.model(category, color, next_turn_), dim=-1)[0]
                     prob = probs[board.next_turn]
                 if prob > max_prob:
                     max_pos = (src_row, src_col, dst_row, dst_col)
@@ -73,7 +73,7 @@ class Agent:
             print(f'======{depth}=====')
             board.show_board()
         result = board.get_result()
-        state_str = board.get_state()
+        state_str = board.gen_formatted_state()
         if self.stat.get(state_str) is None:
             state_stat = []
             self.stat[state_str] = state_stat

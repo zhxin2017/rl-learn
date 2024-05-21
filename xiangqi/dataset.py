@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 import json
 import torch
+import numpy as np
 
 
 def parse_state(state_str):
@@ -8,10 +9,10 @@ def parse_state(state_str):
     board_matrix = []
     for i in range(90):
         board_matrix.append(int(board[i * 2: (i + 1) * 2]))
-    board_matrix = torch.tensor(board_matrix, dtype=torch.int).view(10, 9)
-    category = board_matrix % 10
+    board_matrix = np.array(board_matrix, dtype=int).reshape(10, 9)
+    cid = board_matrix % 10
     color = board_matrix // 10
-    return category, color, int(next_turn)
+    return cid, color, int(next_turn), board_matrix
 
 
 class Ds(Dataset):
@@ -25,8 +26,8 @@ class Ds(Dataset):
         state_str = self.state_strs[item]
         stat_ = torch.tensor(self.stat[state_str]).sum(dim=0)
         probs = stat_ / stat_.sum()
-        category, color, next_turn = parse_state(state_str)
-        return category, color, next_turn, probs
+        cid, color, next_turn, _ = parse_state(state_str)
+        return cid, color, next_turn, probs
 
     def __len__(self):
         return len(self.state_strs)

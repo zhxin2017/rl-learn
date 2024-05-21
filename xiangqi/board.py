@@ -1,10 +1,11 @@
 import numpy as np
-
+from dataset import parse_state
 
 nrow = 10
 ncol = 9
 
 color = {0: 'red', 1: 'black'}
+cid_dict = {'ju':1, 'ma':2, 'xiang':3, 'shi':4, 'jiang':5, 'pao':6, 'zu':7}
 
 class Piece:
     def __init__(self, row, col, color, category):
@@ -14,15 +15,6 @@ class Piece:
         self.category = category
 
     def get_cid(self):
-        cid_dict = {
-            'ju':1,
-            'ma':2,
-            'xiang':3,
-            'shi':4,
-            'jiang':5,
-            'pao':6,
-            'zu':7
-        }
         return cid_dict[self.category]
 
     def get_char(self):
@@ -50,9 +42,15 @@ class Piece:
 
 
 class Board:
-    def __init__(self, first_turn=0):
-        self.board_matrix = np.zeros([10, 9], dtype=int)
+    def __init__(self, first_turn=0, state_str=None):
         self.pos_to_piece = {}
+        if state_str is not None:
+            self.load_state(state_str)
+        else:
+            self.init_board(first_turn)
+
+    def init_board(self, first_turn):
+        self.board_matrix = np.zeros([10, 9], dtype=int)
         self.next_turn = first_turn
         for r in range(nrow):
             for c in range(ncol):
@@ -135,10 +133,32 @@ class Board:
         self.pos_to_piece[(3, 6)] = zu4black
         self.pos_to_piece[(3, 8)] = zu5black
 
-    def get_state(self):
+    def gen_formatted_state(self):
         board_ = self.board_matrix.reshape(-1)
         state = ''.join(['0' * (1 - b // 10) + str(b) for b in board_]) + '|' + str(self.next_turn)
         return state
+
+    def load_state(self, state_str):
+        cid, color, next_turn, board_matrix = parse_state(state_str)
+        self.next_turn = next_turn
+        self.board_matrix = board_matrix
+
+        self.pieces = []
+        category_dict = {v: k for k, v in cid_dict.items()}
+        for i in range(nrow):
+            for j in range(ncol):
+                if cid[i, j] < 1:
+                    self.pos_to_piece[(i, j)] = None
+                    continue
+                piece = Piece(i, j, color[i, j].item(), category_dict[cid[i, j].item()])
+                self.pos_to_piece[(i, j)] = piece
+                if cid[i, j] == 5:
+                    if color[i, j] == 0:
+                        self.jiangred = piece
+                    else:
+                        self.jiangblack = piece
+                self.pieces.append(piece)
+
 
     def show_board(self):
         show = ''
@@ -153,33 +173,32 @@ class Board:
         print(show)
 
     def check_jiang_facing(self, moving_piece, dst_pos):
-        jiang_red, jiang_black = self.pieces[:2]
         if moving_piece.category != 'jiang':
-            if jiang_red.col != jiang_black.col:
+            if self.jiangred.col != self.jiangblack.col:
                 return False
-            if moving_piece.col != jiang_red.col:
+            if moving_piece.col != self.jiangred.col:
                 return False
             if moving_piece.col == dst_pos[1]:
                 return False
             n_blockade = 0
-            for i in range(jiang_black.row + 1, jiang_red.row):
-                if self.pos_to_piece[(i, jiang_red.col)] is not None:
+            for i in range(self.jiangblack.row + 1, self.jiangred.row):
+                if self.pos_to_piece[(i, self.jiangred.col)] is not None:
                     n_blockade += 1
                     if n_blockade > 1:
                         return False
             return True
         else:
-            if jiang_red.col == jiang_black.col:
+            if self.jiangred.col == self.jiangblack.col:
                 return False
             if moving_piece.col == dst_pos[1]:
                 return False
-            row_red = jiang_red.row
-            row_black = jiang_black.row
+            row_red = self.jiangred.row
+            row_black = self.jiangblack.row
             if moving_piece.color == 0:
                 col_red = dst_pos[1]
-                col_black = jiang_black.col
+                col_black = self.jiangblack.col
             else:
-                col_red = jiang_red.col
+                col_red = self.jiangred.col
                 col_black = dst_pos[1]
             if col_red != col_black:
                 return False
