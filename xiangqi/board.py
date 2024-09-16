@@ -1,11 +1,12 @@
 import numpy as np
 from dataset import parse_state
+from config import color_str_to_id, piece_name_to_id
 
 nrow = 10
 ncol = 9
 
-color = {0: 'red', 1: 'black'}
-cid_dict = {'ju':1, 'ma':2, 'xiang':3, 'shi':4, 'jiang':5, 'pao':6, 'zu':7}
+piece_id_to_name = {v: k for k, v in piece_name_to_id.items()}
+color_id_to_str = {v: k for k, v in color_str_to_id.items()}
 
 class Piece:
     def __init__(self, row, col, color, category):
@@ -15,20 +16,20 @@ class Piece:
         self.category = category
 
     def get_cid(self):
-        return cid_dict[self.category]
+        return piece_name_to_id[self.category]
 
     def get_char(self):
         char_dict = {
-            0: {
-                'ju':'俥',
-                'ma':'傌',
-                'xiang':'相',
-                'shi':'仕',
-                'jiang':'帥',
-                'pao':'炮',
-                'zu':'兵'
+            'red': {
+                'ju': '俥',
+                'ma': '傌',
+                'xiang': '相',
+                'shi': '仕',
+                'jiang': '帥',
+                'pao': '炮',
+                'zu': '兵'
             },
-            1: {
+            'black': {
                 'ju': '車',
                 'ma': '馬',
                 'xiang': '象',
@@ -42,12 +43,12 @@ class Piece:
 
 
 class Board:
-    def __init__(self, first_turn=0, state_str=None):
+    def __init__(self, next_turn='red', state_str=None):
         self.pos_to_piece = {}
         if state_str is not None:
             self.load_state(state_str)
         else:
-            self.init_board(first_turn)
+            self.init_board(next_turn)
 
     def init_board(self, first_turn):
         self.board_matrix = np.zeros([10, 9], dtype=int)
@@ -55,39 +56,39 @@ class Board:
         for r in range(nrow):
             for c in range(ncol):
                 self.pos_to_piece[(r, c)] = None
-        ju1black = Piece(0, 0, 1, 'ju')
-        ma1black = Piece(0, 1, 1, 'ma')
-        xiang1black = Piece(0, 2, 1, 'xiang')
-        shi1black= Piece(0, 3, 1, 'shi')
-        jiangblack = Piece(0, 4, 1, 'jiang')
-        shi2black= Piece(0, 5, 1, 'shi')
-        xiang2black = Piece(0, 6, 1, 'xiang')
-        ma2black = Piece(0, 7, 1, 'ma')
-        ju2black = Piece(0, 8, 1, 'ju')
-        pao1black = Piece(2, 1, 1, 'pao')
-        pao2black = Piece(2, 7, 1, 'pao')
-        zu1black = Piece(3, 0, 1, 'zu')
-        zu2black = Piece(3, 2, 1, 'zu')
-        zu3black = Piece(3, 4, 1, 'zu')
-        zu4black = Piece(3, 6, 1, 'zu')
-        zu5black = Piece(3, 8, 1, 'zu')
+        ju1black = Piece(0, 0, 'black', 'ju')
+        ma1black = Piece(0, 1, 'black', 'ma')
+        xiang1black = Piece(0, 2, 'black', 'xiang')
+        shi1black = Piece(0, 3, 'black', 'shi')
+        jiangblack = Piece(0, 4, 'black', 'jiang')
+        shi2black = Piece(0, 5, 'black', 'shi')
+        xiang2black = Piece(0, 6, 'black', 'xiang')
+        ma2black = Piece(0, 7, 'black', 'ma')
+        ju2black = Piece(0, 8, 'black', 'ju')
+        pao1black = Piece(2, 1, 'black', 'pao')
+        pao2black = Piece(2, 7, 'black', 'pao')
+        zu1black = Piece(3, 0, 'black', 'zu')
+        zu2black = Piece(3, 2, 'black', 'zu')
+        zu3black = Piece(3, 4, 'black', 'zu')
+        zu4black = Piece(3, 6, 'black', 'zu')
+        zu5black = Piece(3, 8, 'black', 'zu')
 
-        ju1red = Piece(9, 0, 0, 'ju')
-        ma1red = Piece(9, 1, 0, 'ma')
-        xiang1red = Piece(9, 2, 0, 'xiang')
-        shi1red= Piece(9, 3, 0, 'shi')
-        jiangred = Piece(9, 4, 0, 'jiang')
-        shi2red= Piece(9, 5, 0, 'shi')
-        xiang2red = Piece(9, 6, 0, 'xiang')
-        ma2red = Piece(9, 7, 0, 'ma')
-        ju2red = Piece(9, 8, 0, 'ju')
-        pao1red = Piece(7, 1, 0, 'pao')
-        pao2red = Piece(7, 7, 0, 'pao')
-        zu1red = Piece(6, 0, 0, 'zu')
-        zu2red = Piece(6, 2, 0, 'zu')
-        zu3red = Piece(6, 4, 0, 'zu')
-        zu4red = Piece(6, 6, 0, 'zu')
-        zu5red = Piece(6, 8, 0, 'zu')
+        ju1red = Piece(9, 0, 'red', 'ju')
+        ma1red = Piece(9, 1, 'red', 'ma')
+        xiang1red = Piece(9, 2, 'red', 'xiang')
+        shi1red = Piece(9, 3, 'red', 'shi')
+        jiangred = Piece(9, 4, 'red', 'jiang')
+        shi2red = Piece(9, 5, 'red', 'shi')
+        xiang2red = Piece(9, 6, 'red', 'xiang')
+        ma2red = Piece(9, 7, 'red', 'ma')
+        ju2red = Piece(9, 8, 'red', 'ju')
+        pao1red = Piece(7, 1, 'red', 'pao')
+        pao2red = Piece(7, 7, 'red', 'pao')
+        zu1red = Piece(6, 0, 'red', 'zu')
+        zu2red = Piece(6, 2, 'red', 'zu')
+        zu3red = Piece(6, 4, 'red', 'zu')
+        zu4red = Piece(6, 6, 'red', 'zu')
+        zu5red = Piece(6, 8, 'red', 'zu')
 
         self.jiangred = jiangred
         self.jiangblack = jiangblack
@@ -97,7 +98,7 @@ class Board:
                        ju1black, ma1black, xiang1black, shi1black, shi2black, xiang2black, ma2black,
                        ju2black, pao1black, pao2black, zu1black, zu2black, zu3black, zu4black, zu5black]
         for piece in self.pieces:
-            self.board_matrix[piece.row, piece.col] = piece.color * 10 + piece.get_cid()
+            self.board_matrix[piece.row, piece.col] = color_str_to_id[piece.color] * 10 + piece.get_cid()
 
         self.pos_to_piece[(9, 0)] = ju1red
         self.pos_to_piece[(9, 1)] = ma1red
@@ -135,7 +136,7 @@ class Board:
 
     def gen_formatted_state(self):
         board_ = self.board_matrix.reshape(-1)
-        state = ''.join(['0' * (1 - b // 10) + str(b) for b in board_]) + '|' + str(self.next_turn)
+        state = ''.join(['0' * (1 - b // 10) + str(b) for b in board_]) + '|' + self.next_turn
         return state
 
     def load_state(self, state_str):
@@ -144,31 +145,47 @@ class Board:
         self.board_matrix = board_matrix
 
         self.pieces = []
-        category_dict = {v: k for k, v in cid_dict.items()}
+        self.jiangblack = None
+        self.jiangred = None
         for i in range(nrow):
             for j in range(ncol):
                 if cid[i, j] < 1:
                     self.pos_to_piece[(i, j)] = None
                     continue
-                piece = Piece(i, j, color[i, j].item(), category_dict[cid[i, j].item()])
+                piece = Piece(i, j, color_id_to_str[color[i, j].item()], piece_id_to_name[cid[i, j].item()])
                 self.pos_to_piece[(i, j)] = piece
                 if cid[i, j] == 5:
-                    if color[i, j] == 0:
+                    if color_id_to_str[color[i, j]] == 'red':
                         self.jiangred = piece
                     else:
                         self.jiangblack = piece
                 self.pieces.append(piece)
 
-
-    def show_board(self):
+    def show_board(self, src_row=None, src_col=None, dst_row=None, dst_col=None):
         show = ''
+        context = '\x1b[6;30;42m'
+        context_end = '\x1b[0m'
+        CRED = '\033[91m'
+        CEND = '\033[0m'
         for i in range(nrow):
             for j in range(ncol):
                 piece = self.pos_to_piece[(i, j)]
                 if piece is None:
-                    show += '　'
+                    if src_row is not None and i == src_row and j == src_col:
+                        show += f'{context}　{context_end}'
+                    else:
+                        # show += '　'
+                        show += '\033[33m十\033[0m'
                 else:
-                    show += piece.get_char()
+                    if piece.color == 'red':
+                        char = f'{CRED}{piece.get_char()}{CEND}'
+                    else:
+                        char = piece.get_char()
+                    if src_row is not None and i == dst_row and j == dst_col:
+                        show += f'{context}{char}{context_end}'
+                    else:
+                        show += char
+
             show += '\n'
         print(show)
 
@@ -218,7 +235,7 @@ class Board:
                     piece_ = self.pos_to_piece.get((piece.row, c))
                     if piece_ is None:
                         destinies_.append((piece.row, c))
-                    elif piece_.color == 1 - self.next_turn:
+                    elif piece_.color != self.next_turn:
                         destinies_.append((piece.row, c))
                         break
                     else:
@@ -229,7 +246,7 @@ class Board:
                     piece_ = self.pos_to_piece.get((piece.row, c))
                     if piece_ is None:
                         destinies_.append((piece.row, c))
-                    elif piece_.color == 1 - self.next_turn:
+                    elif piece_.color != self.next_turn:
                         destinies_.append((piece.row, c))
                         break
                     else:
@@ -240,7 +257,7 @@ class Board:
                     piece_ = self.pos_to_piece.get((r, piece.col))
                     if piece_ is None:
                         destinies_.append((r, piece.col))
-                    elif piece_.color == 1 - self.next_turn:
+                    elif piece_.color != self.next_turn:
                         destinies_.append((r, piece.col))
                         break
                     else:
@@ -251,7 +268,7 @@ class Board:
                     piece_ = self.pos_to_piece.get((r, piece.col))
                     if piece_ is None:
                         destinies_.append((r, piece.col))
-                    elif piece_.color == 1 - self.next_turn:
+                    elif piece_.color != self.next_turn:
                         destinies_.append((r, piece.col))
                         break
                     else:
@@ -264,12 +281,12 @@ class Board:
                         # left upper
                         if piece.row > 0:
                             pos = (piece.row - 1, piece.col - 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                         # left below
                         if piece.row < nrow - 1:
                             pos = (piece.row + 1, piece.col - 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                 # search right
                 if piece.col < ncol - 2:
@@ -277,12 +294,12 @@ class Board:
                         # right upper
                         if piece.row > 0:
                             pos = (piece.row - 1, piece.col + 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                         # left below
                         if piece.row < nrow - 1:
                             pos = (piece.row + 1, piece.col + 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                 # search upper
                 if piece.row > 1:
@@ -290,12 +307,12 @@ class Board:
                         # upper left
                         if piece.col > 0:
                             pos = (piece.row - 2, piece.col - 1)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                         # upper right
                         if piece.col < ncol - 1:
                             pos = (piece.row - 2, piece.col + 1)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                 # search below
                 if piece.row < nrow - 2:
@@ -303,12 +320,12 @@ class Board:
                         # below left
                         if piece.col > 0:
                             pos = (piece.row + 2, piece.col - 1)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                         # below right
                         if piece.col < ncol - 1:
                             pos = (piece.row + 2, piece.col + 1)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
 
             elif piece.category == 'xiang':
@@ -317,77 +334,77 @@ class Board:
                     if (piece.color == 1 and piece.row > 1) or (piece.color == 0 and piece.row > 5):
                         if self.pos_to_piece[(piece.row - 1, piece.col - 1)] is None:
                             pos = (piece.row - 2, piece.col - 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                     # left lower
                     if (piece.color == 1 and piece.row < 3) or (piece.color == 0 and piece.row < 8):
                         if self.pos_to_piece[(piece.row + 1, piece.col - 1)] is None:
                             pos = (piece.row + 2, piece.col - 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                 if piece.col < 7:
                     # right upper
                     if (piece.color == 1 and piece.row > 1) or (piece.color == 0 and piece.row > 5):
                         if self.pos_to_piece[(piece.row - 1, piece.col + 1)] is None:
                             pos = (piece.row - 2, piece.col + 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                     # right lower
                     if (piece.color == 1 and piece.row < 3) or (piece.color == 0 and piece.row < 8):
                         if self.pos_to_piece[(piece.row + 1, piece.col + 1)] is None:
                             pos = (piece.row + 2, piece.col + 2)
-                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                            if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
 
             elif piece.category == 'shi':
                 # upper left
                 if (piece.col == 3 and piece.row == 0) or (piece.col == 3 and piece.row == 7):
                     pos = (piece.row + 1, piece.col + 1)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # upper right
                 if (piece.col == 5 and piece.row == 0) or (piece.col == 5 and piece.row == 7):
                     pos = (piece.row + 1, piece.col - 1)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # lower left
                 if (piece.col == 3 and piece.row == 2) or (piece.col == 3 and piece.row == 9):
                     pos = (piece.row - 1, piece.col + 1)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # lower right
                 if (piece.col == 5 and piece.row == 2) or (piece.col == 5 and piece.row == 9):
                     pos = (piece.row - 1, piece.col - 1)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # middle
                 if (piece.col == 4 and piece.row == 1) or (piece.col == 4 and piece.row == 8):
                     pos_ = [(piece.row - 1, piece.col - 1), (piece.row - 1, piece.col + 1),
                             (piece.row + 1, piece.col - 1), (piece.row + 1, piece.col + 1)]
                     for pos in pos_:
-                        if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                        if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                             destinies_.append(pos)
 
             elif piece.category == 'jiang':
                 # left
                 if piece.col > 3:
                     pos = (piece.row, piece.col - 1)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # right
                 if piece.col < 5:
                     pos = (piece.row, piece.col + 1)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # upper
                 if (piece.row > 0 and piece.color == 1) or (piece.row > 7 and piece.color == 0):
                     pos = (piece.row - 1, piece.col)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # lower
                 if (piece.row < 0 and piece.color == 1) or (piece.row < 9 and piece.color == 0):
                     pos = (piece.row + 1, piece.col)
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
 
             elif piece.category == 'pao':
@@ -403,7 +420,7 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color == 1 - piece.color:
+                                if piece__.color != piece.color:
                                     destinies_.append(pos)
                                     break
                         break
@@ -420,7 +437,7 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color == 1 - piece.color:
+                                if piece__.color != piece.color:
                                     destinies_.append(pos)
                                     break
                         break
@@ -437,7 +454,7 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color == 1 - piece.color:
+                                if piece__.color != piece.color:
                                     destinies_.append(pos)
                                     break
                         break
@@ -453,7 +470,7 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color == 1 - piece.color:
+                                if piece__.color != piece.color:
                                     destinies_.append(pos)
                                     break
                         break
@@ -481,7 +498,7 @@ class Board:
                         if piece.col < 8:
                             pos_.append((piece.row, piece.col + 1))
                 for pos in pos_:
-                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color == 1 - piece.color:
+                    if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
             destinies_ = [p for p in destinies_ if not self.check_jiang_facing(piece, p)]
             destinies.append(destinies_)
@@ -501,48 +518,47 @@ class Board:
             removed = None
         self.pos_to_piece[(src_row, src_col)] = None
         self.pos_to_piece[(dst_row, dst_col)] = src_piece
-        self.board_matrix[dst_row, dst_col] = src_piece.color * 10 + src_piece.get_cid()
+        self.board_matrix[dst_row, dst_col] = color_str_to_id[src_piece.color] * 10 + src_piece.get_cid()
         self.board_matrix[src_row, src_col] = 0
         src_piece.row = dst_row
         src_piece.col = dst_col
-        self.next_turn = 1 - self.next_turn
+        self.next_turn = 'black' if self.next_turn == 'red' else 'red'
         return removed
 
     def restore(self, src_row, src_col, dst_row, dst_col, removed_piece):
         moved_piece = self.pos_to_piece[(dst_row, dst_col)]
         self.pos_to_piece[(src_row, src_col)] = moved_piece
-        self.board_matrix[src_row, src_col] = moved_piece.color * 10 + moved_piece.get_cid()
+        self.board_matrix[src_row, src_col] = color_str_to_id[moved_piece.color] * 10 + moved_piece.get_cid()
         moved_piece.row = src_row
         moved_piece.col = src_col
 
         self.pos_to_piece[(dst_row, dst_col)] = removed_piece
         if removed_piece is not None:
-            self.board_matrix[dst_row, dst_col] = removed_piece.color * 10 + removed_piece.get_cid()
+            self.board_matrix[dst_row, dst_col] = color_str_to_id[removed_piece.color] * 10 + removed_piece.get_cid()
             self.pieces.append(removed_piece)
         else:
             self.board_matrix[dst_row, dst_col] = 0
 
-        self.next_turn = 1 - self.next_turn
-
+        self.next_turn = 'black' if self.next_turn == 'red' else 'red'
 
     def get_result(self):
-        prev_turn = 1 - self.next_turn
-        if prev_turn == 0 and self.jiangblack not in self.pieces:
-            return 0
-        if prev_turn == 1 and self.jiangred not in self.pieces:
-            return 1
+        if self.next_turn == 'black' and (self.jiangblack is None or self.jiangblack not in self.pieces):
+            return 'red'
+        if self.next_turn == 'red' and (self.jiangred is None or self.jiangred not in self.pieces):
+            return 'black'
         _, moves = self.feasible_moves()
         num_move = 0
         for moves_p in moves:
             num_move += len(moves_p)
         if num_move == 0:
-            return prev_turn
-        return 3
+            return 'red' if self.next_turn == 'black' else 'black'
+        return 'draw'
+
 
 if __name__ == '__main__':
     board = Board()
-    print(len(board.pieces))
     board.move(7, 1, 0, 1)
+    board.show_board(7, 1, 0, 1)
     print(len(board.pieces))
     pieces, moves = board.feasible_moves()
     print(moves)

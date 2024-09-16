@@ -10,16 +10,17 @@ from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-model_ = model.Evaluator(n_layer=12, dmodel=256)
+model_ = model.Evaluator(n_layer=20, dmodel=512)
 optimizer = optim.Adam(model_.parameters(), lr=1e-5)
 loss_fn = torch.nn.CrossEntropyLoss()
 
 
-def train_model(stat_file, batch_size, device):
-    ds = dataset.Ds(stat_file)
+def train_model(stat, batch_size, device):
+    ds = dataset.Ds(stat)
     dl = DataLoader(ds, batch_size=batch_size, shuffle=True)
-    pbar = tqdm(dl)
-    for cid, color, next_turn, probs in pbar:
+    cnt = 0
+    for cid, color, next_turn, probs in dl:
+        cnt += 1
         cid = cid.to(device)
         color = color.to(device)
         next_turn = next_turn.to(device)
@@ -27,18 +28,18 @@ def train_model(stat_file, batch_size, device):
         probs_pred = model_(cid, color, next_turn)
         loss = loss_fn(probs_pred, probs)
         loss_ = loss.item()
-        pbar.set_description(f'loss: {loss_: .4f}')
+        print(f'-----------batch {cnt}/{len(dl)}, loss: {loss_: .4f}------------')
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
 import os
-device = torch.device('cpu')
+device = torch.device('mps')
 model_.to(device)
 
 train_cnt = 1000
-train_epoch = 4
-play_cnt = 100
+play_cnt = 10
+batch_size = 16
 folder = '/Users/zx/Documents/rl-exp/xiangqi/resources'
 model_files = os.listdir(folder)
 model_files = [f for f in model_files if f.endswith('.pt')]
@@ -53,27 +54,39 @@ for i in range(train_cnt):
     if i <= latest_version:
         continue
     print(f'playing {i}')
-    stat_file = f'{folder}/stat.json'
     if i == 0:
-        agent_ = agent.Agent(model=None, epsilon=.1, stat_file=stat_file, device=device)
+        model = None
     else:
-        agent_ = agent.Agent(model=model_, epsilon=.1, stat_file=stat_file, device=device)
+        model = model_
+    if i + 1 < 50:
+        stat_file = None
+    else:
+        stat_file = f'{folder}/stat.json'
+    agent_ = agent.Agent(model=model, epsilon=.4, stat_file=stat_file, device=device)
 
-    # played_states = random.sample(list(agent_.stat.keys()), play_cnt)
-    # print('play from saved states')
-    # for j in tqdm(range(play_cnt)):
-    #     board_ = board.Board(state_str=played_states[j])
-    #     agent_.self_play(board_, 0, show_board=False)
-    #
-    # print('play from beginning')
-    # for j in tqdm(range(play_cnt)):
-    #     board_ = board.Board(first_turn=random.choice([0, 1]))
-    #     agent_.self_play(board_, 0, show_board=False)
+    saved_states = list(agent_.stat.keys())
+    if len(saved_states) > play_cnt:
+        played_states = random.sample(saved_states, play_cnt)
+        print(f'train #{i + 1}, play from saved states')
+        for j in range(play_cnt):
+            board_ = board.Board(state_str=played_states[j])
+            if board_.get_result() != 'draw':
+                continue
+            agent_.self_play(board_, 0, show_board=True)
 
-    # with open(agent_.stat_file, 'w') as f:
-    #     f.write(json.dumps(agent_.stat, indent=4))
-    print(f'training')
-    for j in range(train_epoch):
-        print(f'epoch {j}')
-        train_model(stat_file, batch_size=4, device=device)
-    torch.save(model_.state_dict(), f'{folder}/evaluator.{i}.pt')
+        print(f'train #{i + 1}, train using replayed states')
+        train_model(agent_.stat, batch_size=batch_size, device=device)
+
+    print(f'train #{i + 1}, play from beginning')
+    for j in range(play_cnt):
+        board_ = board.Board()
+        agent_.self_play(board_, 0, show_board=True)
+
+    print(f'train #{i + 1}, train using new states')
+    train_model(agent_.stat, batch_size=batch_size, device=device)
+
+    if i + 1 >= 50:
+        with open(agent_.stat_file, 'w') as f:
+            f.write(json.dumps(agent_.stat, indent=4))
+    if (i + 1) % 5 == 0:
+        torch.save(agent_.model.state_dict(), f'{folder}/evaluator.{i + 1}.pt')

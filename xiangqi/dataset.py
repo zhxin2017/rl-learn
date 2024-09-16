@@ -1,4 +1,5 @@
 from torch.utils.data import Dataset
+from config import color_str_to_id
 import json
 import torch
 import numpy as np
@@ -11,15 +12,18 @@ def parse_state(state_str):
         board_matrix.append(int(board[i * 2: (i + 1) * 2]))
     board_matrix = np.array(board_matrix, dtype=int).reshape(10, 9)
     cid = board_matrix % 10
+    no_color_mask = cid == 0
     color = board_matrix // 10
-    return cid, color, int(next_turn), board_matrix
+    color = color * (1 - no_color_mask) + no_color_mask * 2
+    return cid, color, next_turn, board_matrix
 
 
 class Ds(Dataset):
-    def __init__(self, stat_file):
-        self.stat_file = stat_file
-        with open(stat_file, 'r') as f:
-            self.stat = json.loads(f.read())
+    def __init__(self, stat):
+        self.stat = stat
+        # self.stat_file = stat_file
+        # with open(stat_file, 'r') as f:
+        #     self.stat = json.loads(f.read())
         self.state_strs = list(self.stat.keys())
 
     def __getitem__(self, item):
@@ -27,7 +31,8 @@ class Ds(Dataset):
         stat_ = torch.tensor(self.stat[state_str]).sum(dim=0)
         probs = stat_ / stat_.sum()
         cid, color, next_turn, _ = parse_state(state_str)
-        return cid, color, next_turn, probs
+        next_turn_id = color_str_to_id[next_turn]
+        return cid, color, next_turn_id, probs
 
     def __len__(self):
         return len(self.state_strs)
