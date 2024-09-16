@@ -74,7 +74,7 @@ class Agent:
                 category = torch.tensor(board.board_matrix % 10, dtype=torch.int, device=self.device).view(1, 10, 9)
                 color_mask = category > 0
                 color = torch.tensor(board.board_matrix // 10, dtype=torch.int, device=self.device).view(1, 10, 9) + 1
-                color = color * color_mask + (1 - color_mask) * 2
+                color = color * color_mask + ~color_mask * 2
                 board.restore(src_row, src_col, dst_row, dst_col, removed)
 
                 next_turn_id = torch.tensor([1 - color_str_to_id[board.next_turn]], dtype=torch.int,
@@ -117,6 +117,11 @@ class Agent:
                 state_stat.append([0, 0, 1])
             else:
                 result = self.self_play(board, depth, show_board)
+                stat_ = [0, 0, 0]
+                stat_[color_str_to_id[result]] = 1
+                if len(state_stat) == self.stat_capacity:
+                    state_stat.pop(0)
+                state_stat.append(stat_)
         else:
             stat_ = [0, 0, 0]
             stat_[color_str_to_id[result]] = 1
