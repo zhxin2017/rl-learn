@@ -1,7 +1,3 @@
-import sys
-
-import numpy as np
-import random
 
 import torch
 
@@ -11,18 +7,11 @@ import model
 
 
 class Game:
-    def __init__(self, agent=None, first_turn=0):
-        self.board = board.Board(first_turn)
+    def __init__(self, agent=None, next_turn='red', me_color='black'):
+        self.board = board.Board(next_turn, me_color=me_color)
         self.agent = agent
         self.turn = 0
 
-    def show_result(self, result):
-        if result == 0:
-            print('tie')
-        if result == -1:
-            print('-1 won')
-        if result == 1:
-            print('1 won')
 
     def agent_step(self):
         (src_row, src_col, dst_row, dst_col), prob = self.agent.exploit(self.board)
@@ -40,7 +29,7 @@ class Game:
             print('-------------------')
             if mode[0] == 'a':
                 src_row, src_col, dst_row, dst_col, prob = self.agent_step()
-                self.board.show_board()
+                self.board.show_board(src_row, src_col, dst_row, dst_col)
                 print(f'{self.board.pos_to_piece[(dst_row, dst_col)].get_char()} {src_row}{src_col}'
                       f'---->{dst_row}{dst_col} win prob {prob:.4f}')
                 result = self.board.get_result()
@@ -75,10 +64,10 @@ class Game:
 
 if __name__ == '__main__':
     # first_turn = int(sys.argv[1])
-    model_ = model.Evaluator(10, 128)
+    model_ = model.Evaluator(20, 512)
     device = torch.device('mps')
-    model_.load_state_dict(torch.load('/Users/zx/Documents/rl-exp/xiangqi/resources/evaluator.99.pt', map_location=device))
+    model_.load_state_dict(torch.load('resources/evaluator.5.pt', map_location=device))
     model_.to(device)
     agent_ = agent.Agent(model_, device=device)
-    game = Game(agent_, first_turn=0)
-    game.play(mode='pa')
+    game = Game(agent_, next_turn='red', me_color='black')
+    game.play(mode='aa')

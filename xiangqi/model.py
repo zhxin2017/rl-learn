@@ -13,12 +13,12 @@ class Evaluator(nn.Module):
         self.row_emb_m = nn.Embedding(10, dmodel)
         self.col_emb_m = nn.Embedding(9, dmodel)
         self.turn_emb_m = nn.Embedding(2, dmodel)
-        self.result_query_emb_m = nn.Embedding(1, dmodel)
+        self.result_query_emb_m = nn.Embedding(2, dmodel)
         self.encoder_layers = nn.ModuleList()
         for i in range(n_layer):
             encoder_layer = tsfm.Block(dmodel, dhead)
             self.encoder_layers.append(encoder_layer)
-        self.result_reg = nn.Linear(dmodel, 3)
+        self.result_reg = nn.Linear(dmodel, 1)
 
     def forward(self, cid, color, turn):
         b = cid.shape[0]
@@ -29,13 +29,13 @@ class Evaluator(nn.Module):
         col_emb = self.col_emb_m(torch.arange(9, device=cid.device)).view(1, 1, 9, self.dmodel)
         x = x + row_emb + col_emb
         x = x.view(b, 90, -1)
-        result_query = self.result_query_emb_m(torch.zeros([1], dtype=torch.int, device=cid.device)).view(1, 1, self.dmodel)
+        result_query = (self.result_query_emb_m(torch.tensor([0, 1], dtype=torch.int, device=cid.device)))
+        result_query = result_query.view(1, 2, self.dmodel).repeat(b, 1, 1)
         turn_emb = self.turn_emb_m(turn).view(b, 1, self.dmodel)
-        result_query = result_query + turn_emb
-        x = torch.concat([x, result_query], dim=1)
+        x = torch.concat([x, turn_emb, result_query], dim=1)
         for enc in self.encoder_layers:
             x = enc(x, x, x)
-        result = self.result_reg(x[:, -1])
+        result = self.result_reg(x[:, -2:]).view(b, 2)
         return result
 
 

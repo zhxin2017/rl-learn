@@ -1,12 +1,11 @@
 import numpy as np
+
+import dataset
 from dataset import parse_state
-from config import color_str_to_id, piece_name_to_id
+from config import color_str_to_id, piece_name_to_id, piece_id_to_name, color_id_to_str
 
 nrow = 10
 ncol = 9
-
-piece_id_to_name = {v: k for k, v in piece_name_to_id.items()}
-color_id_to_str = {v: k for k, v in color_str_to_id.items()}
 
 class Piece:
     def __init__(self, row, col, color, category):
@@ -43,8 +42,9 @@ class Piece:
 
 
 class Board:
-    def __init__(self, next_turn='red', state_str=None):
+    def __init__(self, next_turn='red', state_str=None, me_color='red'):
         self.pos_to_piece = {}
+        self.me_color = me_color
         if state_str is not None:
             self.load_state(state_str)
         else:
@@ -56,39 +56,46 @@ class Board:
         for r in range(nrow):
             for c in range(ncol):
                 self.pos_to_piece[(r, c)] = None
-        ju1black = Piece(0, 0, 'black', 'ju')
-        ma1black = Piece(0, 1, 'black', 'ma')
-        xiang1black = Piece(0, 2, 'black', 'xiang')
-        shi1black = Piece(0, 3, 'black', 'shi')
-        jiangblack = Piece(0, 4, 'black', 'jiang')
-        shi2black = Piece(0, 5, 'black', 'shi')
-        xiang2black = Piece(0, 6, 'black', 'xiang')
-        ma2black = Piece(0, 7, 'black', 'ma')
-        ju2black = Piece(0, 8, 'black', 'ju')
-        pao1black = Piece(2, 1, 'black', 'pao')
-        pao2black = Piece(2, 7, 'black', 'pao')
-        zu1black = Piece(3, 0, 'black', 'zu')
-        zu2black = Piece(3, 2, 'black', 'zu')
-        zu3black = Piece(3, 4, 'black', 'zu')
-        zu4black = Piece(3, 6, 'black', 'zu')
-        zu5black = Piece(3, 8, 'black', 'zu')
+        if self.me_color == 'red':
+            row0_black, row2_black, row3_black = 0, 2, 3
+            row0_red, row2_red, row3_red = 9, 7, 6
+        else:
+            row0_black, row2_black, row3_black = 9, 7, 6
+            row0_red, row2_red, row3_red = 0, 2, 3
+            
+        ju1black = Piece(row0_black, 0, 'black', 'ju')
+        ma1black = Piece(row0_black, 1, 'black', 'ma')
+        xiang1black = Piece(row0_black, 2, 'black', 'xiang')
+        shi1black = Piece(row0_black, 3, 'black', 'shi')
+        jiangblack = Piece(row0_black, 4, 'black', 'jiang')
+        shi2black = Piece(row0_black, 5, 'black', 'shi')
+        xiang2black = Piece(row0_black, 6, 'black', 'xiang')
+        ma2black = Piece(row0_black, 7, 'black', 'ma')
+        ju2black = Piece(row0_black, 8, 'black', 'ju')
+        pao1black = Piece(row2_black, 1, 'black', 'pao')
+        pao2black = Piece(row2_black, 7, 'black', 'pao')
+        zu1black = Piece(row3_black, 0, 'black', 'zu')
+        zu2black = Piece(row3_black, 2, 'black', 'zu')
+        zu3black = Piece(row3_black, 4, 'black', 'zu')
+        zu4black = Piece(row3_black, 6, 'black', 'zu')
+        zu5black = Piece(row3_black, 8, 'black', 'zu')
 
-        ju1red = Piece(9, 0, 'red', 'ju')
-        ma1red = Piece(9, 1, 'red', 'ma')
-        xiang1red = Piece(9, 2, 'red', 'xiang')
-        shi1red = Piece(9, 3, 'red', 'shi')
-        jiangred = Piece(9, 4, 'red', 'jiang')
-        shi2red = Piece(9, 5, 'red', 'shi')
-        xiang2red = Piece(9, 6, 'red', 'xiang')
-        ma2red = Piece(9, 7, 'red', 'ma')
-        ju2red = Piece(9, 8, 'red', 'ju')
-        pao1red = Piece(7, 1, 'red', 'pao')
-        pao2red = Piece(7, 7, 'red', 'pao')
-        zu1red = Piece(6, 0, 'red', 'zu')
-        zu2red = Piece(6, 2, 'red', 'zu')
-        zu3red = Piece(6, 4, 'red', 'zu')
-        zu4red = Piece(6, 6, 'red', 'zu')
-        zu5red = Piece(6, 8, 'red', 'zu')
+        ju1red = Piece(row0_red, 0, 'red', 'ju')
+        ma1red = Piece(row0_red, 1, 'red', 'ma')
+        xiang1red = Piece(row0_red, 2, 'red', 'xiang')
+        shi1red = Piece(row0_red, 3, 'red', 'shi')
+        jiangred = Piece(row0_red, 4, 'red', 'jiang')
+        shi2red = Piece(row0_red, 5, 'red', 'shi')
+        xiang2red = Piece(row0_red, 6, 'red', 'xiang')
+        ma2red = Piece(row0_red, 7, 'red', 'ma')
+        ju2red = Piece(row0_red, 8, 'red', 'ju')
+        pao1red = Piece(row2_red, 1, 'red', 'pao')
+        pao2red = Piece(row2_red, 7, 'red', 'pao')
+        zu1red = Piece(row3_red, 0, 'red', 'zu')
+        zu2red = Piece(row3_red, 2, 'red', 'zu')
+        zu3red = Piece(row3_red, 4, 'red', 'zu')
+        zu4red = Piece(row3_red, 6, 'red', 'zu')
+        zu5red = Piece(row3_red, 8, 'red', 'zu')
 
         self.jiangred = jiangred
         self.jiangblack = jiangblack
@@ -99,45 +106,8 @@ class Board:
                        ju2black, pao1black, pao2black, zu1black, zu2black, zu3black, zu4black, zu5black]
         for piece in self.pieces:
             self.board_matrix[piece.row, piece.col] = color_str_to_id[piece.color] * 10 + piece.get_cid()
+            self.pos_to_piece[(piece.row, piece.col)] = piece
 
-        self.pos_to_piece[(9, 0)] = ju1red
-        self.pos_to_piece[(9, 1)] = ma1red
-        self.pos_to_piece[(9, 2)] = xiang1red
-        self.pos_to_piece[(9, 3)] = shi1red
-        self.pos_to_piece[(9, 4)] = jiangred
-        self.pos_to_piece[(9, 5)] = shi2red
-        self.pos_to_piece[(9, 6)] = xiang2red
-        self.pos_to_piece[(9, 7)] = ma2red
-        self.pos_to_piece[(9, 8)] = ju2red
-        self.pos_to_piece[(7, 1)] = pao1red
-        self.pos_to_piece[(7, 7)] = pao2red
-        self.pos_to_piece[(6, 0)] = zu1red
-        self.pos_to_piece[(6, 2)] = zu2red
-        self.pos_to_piece[(6, 4)] = zu3red
-        self.pos_to_piece[(6, 6)] = zu4red
-        self.pos_to_piece[(6, 8)] = zu5red
-
-        self.pos_to_piece[(0, 0)] = ju1black
-        self.pos_to_piece[(0, 1)] = ma1black
-        self.pos_to_piece[(0, 2)] = xiang1black
-        self.pos_to_piece[(0, 3)] = shi1black
-        self.pos_to_piece[(0, 4)] = jiangblack
-        self.pos_to_piece[(0, 5)] = shi2black
-        self.pos_to_piece[(0, 6)] = xiang2black
-        self.pos_to_piece[(0, 7)] = ma2black
-        self.pos_to_piece[(0, 8)] = ju2black
-        self.pos_to_piece[(2, 1)] = pao1black
-        self.pos_to_piece[(2, 7)] = pao2black
-        self.pos_to_piece[(3, 0)] = zu1black
-        self.pos_to_piece[(3, 2)] = zu2black
-        self.pos_to_piece[(3, 4)] = zu3black
-        self.pos_to_piece[(3, 6)] = zu4black
-        self.pos_to_piece[(3, 8)] = zu5black
-
-    def gen_formatted_state(self):
-        board_ = self.board_matrix.reshape(-1)
-        state = ''.join(['0' * (1 - b // 10) + str(b) for b in board_]) + '|' + self.next_turn
-        return state
 
     def load_state(self, state_str):
         cid, color, next_turn, board_matrix = parse_state(state_str)
@@ -331,26 +301,26 @@ class Board:
             elif piece.category == 'xiang':
                 if piece.col > 1:
                     # left upper
-                    if (piece.color == 1 and piece.row > 1) or (piece.color == 0 and piece.row > 5):
+                    if (piece.color != self.me_color and piece.row > 1) or (piece.color == self.me_color and piece.row > 5):
                         if self.pos_to_piece[(piece.row - 1, piece.col - 1)] is None:
                             pos = (piece.row - 2, piece.col - 2)
                             if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                     # left lower
-                    if (piece.color == 1 and piece.row < 3) or (piece.color == 0 and piece.row < 8):
+                    if (piece.color != self.me_color and piece.row < 3) or (piece.color == self.me_color and piece.row < 8):
                         if self.pos_to_piece[(piece.row + 1, piece.col - 1)] is None:
                             pos = (piece.row + 2, piece.col - 2)
                             if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                 if piece.col < 7:
                     # right upper
-                    if (piece.color == 1 and piece.row > 1) or (piece.color == 0 and piece.row > 5):
+                    if (piece.color != self.me_color and piece.row > 1) or (piece.color == self.me_color and piece.row > 5):
                         if self.pos_to_piece[(piece.row - 1, piece.col + 1)] is None:
                             pos = (piece.row - 2, piece.col + 2)
                             if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                                 destinies_.append(pos)
                     # right lower
-                    if (piece.color == 1 and piece.row < 3) or (piece.color == 0 and piece.row < 8):
+                    if (piece.color != self.me_color and piece.row < 3) or (piece.color == self.me_color and piece.row < 8):
                         if self.pos_to_piece[(piece.row + 1, piece.col + 1)] is None:
                             pos = (piece.row + 2, piece.col + 2)
                             if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
@@ -397,12 +367,12 @@ class Board:
                     if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # upper
-                if (piece.row > 0 and piece.color == 1) or (piece.row > 7 and piece.color == 0):
+                if (piece.row > 0 and piece.color != self.me_color) or (piece.row > 7 and piece.color == self.me_color):
                     pos = (piece.row - 1, piece.col)
                     if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
                 # lower
-                if (piece.row < 0 and piece.color == 1) or (piece.row < 9 and piece.color == 0):
+                if (piece.row < 2 and piece.color != self.me_color) or (piece.row < 9 and piece.color == self.me_color):
                     pos = (piece.row + 1, piece.col)
                     if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         destinies_.append(pos)
@@ -478,7 +448,7 @@ class Board:
             else:
                 pos_ = []
                 # black
-                if piece.color == 1:
+                if piece.color != self.me_color:
                     if piece.row < 9:
                         pos = (piece.row + 1, piece.col)
                         pos_.append(pos)
@@ -488,7 +458,7 @@ class Board:
                         if piece.col < 8:
                             pos_.append((piece.row, piece.col + 1))
                 # red
-                if piece.color == 0:
+                if piece.color == self.me_color:
                     if piece.row > 0:
                         pos = (piece.row - 1, piece.col)
                         pos_.append(pos)

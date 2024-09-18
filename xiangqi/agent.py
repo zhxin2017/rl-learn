@@ -1,18 +1,18 @@
 import os
 import numpy as np
+import dataset
 from config import color_str_to_id
 import torch
 import sys
 import random
 import json
-from copy import deepcopy
 from board import Board
 
 sys.setrecursionlimit(10000)
 
 
 class Agent:
-    def __init__(self, model=None, epsilon=.7, stat_file='stat.json', stat_capacity=100,
+    def __init__(self, model=None, epsilon=.7, stat_file='stat.json', stat_capacity=10,
                  device=torch.device('mps')):
         self.epsilon = epsilon
         self.stat_file = stat_file
@@ -103,7 +103,7 @@ class Agent:
             print(f'depth {depth}, moving with {method}')
             board.show_board(src_row, src_col, dst_row, dst_col)
         result = board.get_result()
-        state_str = board.gen_formatted_state()
+        state_str = dataset.unparse_state(board.next_turn, board.board_matrix)
         if self.stat.get(state_str) is None:
             state_stat = []
             self.stat[state_str] = state_stat
@@ -114,16 +114,22 @@ class Agent:
             if depth > 200:
                 if len(state_stat) == self.stat_capacity:
                     state_stat.pop(0)
-                state_stat.append([0, 0, 1])
+                state_stat.append([.5, .5])
             else:
                 result = self.self_play(board, depth, show_board)
-                stat_ = [0, 0, 0]
-                stat_[color_str_to_id[result]] = 1
-                if len(state_stat) == self.stat_capacity:
-                    state_stat.pop(0)
-                state_stat.append(stat_)
+                if result != 'draw':
+                    stat_ = [0, 0]
+                    stat_[color_str_to_id[result]] = 1
+                    if len(state_stat) == self.stat_capacity:
+                        state_stat.pop(0)
+                    state_stat.append(stat_)
+                else:
+                    if len(state_stat) == self.stat_capacity:
+                        state_stat.pop(0)
+                    state_stat.append([.5, .5])
+
         else:
-            stat_ = [0, 0, 0]
+            stat_ = [0, 0]
             stat_[color_str_to_id[result]] = 1
             if len(state_stat) == self.stat_capacity:
                 state_stat.pop(0)

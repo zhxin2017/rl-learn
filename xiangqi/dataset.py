@@ -18,6 +18,18 @@ def parse_state(state_str):
     return cid, color, next_turn, board_matrix
 
 
+def unparse_state(next_turn, board_matrix):
+    board_matrix = board_matrix.reshape(-1)
+    state = ''.join(['0' * (1 - b // 10) + str(b) for b in board_matrix]) + '|' + next_turn
+    return state
+
+
+def flip_board(state_str):
+    cid, color, next_turn, board_matrix = parse_state(state_str)
+
+
+
+
 class Ds(Dataset):
     def __init__(self, stat):
         self.stat = stat
@@ -30,9 +42,9 @@ class Ds(Dataset):
         state_str = self.state_strs[item]
         stat_ = torch.tensor(self.stat[state_str]).sum(dim=0)
         probs = stat_ / stat_.sum()
-        cid, color, next_turn, _ = parse_state(state_str)
+        cid, color, next_turn, board_matrix = parse_state(state_str)
         next_turn_id = color_str_to_id[next_turn]
-        return cid, color, next_turn_id, probs
+        return cid, color, next_turn_id, probs, board_matrix
 
     def __len__(self):
         return len(self.state_strs)
