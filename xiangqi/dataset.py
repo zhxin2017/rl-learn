@@ -1,21 +1,7 @@
 from torch.utils.data import Dataset
 from config import color_str_to_id
-import json
+import state
 import torch
-import numpy as np
-
-
-def parse_state(state_str):
-    board, next_turn = state_str.split('|')
-    board_matrix = []
-    for i in range(90):
-        board_matrix.append(int(board[i * 2: (i + 1) * 2]))
-    board_matrix = np.array(board_matrix, dtype=int).reshape(10, 9)
-    cid = board_matrix % 10
-    no_color_mask = cid == 0
-    color = board_matrix // 10
-    color = color * (1 - no_color_mask) + no_color_mask * 2
-    return cid, color, next_turn, board_matrix
 
 
 def unparse_state(next_turn, board_matrix):
@@ -24,30 +10,39 @@ def unparse_state(next_turn, board_matrix):
     return state
 
 
-def flip_board(state_str):
-    cid, color, next_turn, board_matrix = parse_state(state_str)
-
-
+# def flip_board(state_str):
+#     cid, color, next_turn, board_matrix = parse_state(state_str)
 
 
 class Ds(Dataset):
-    def __init__(self, stat):
-        self.stat = stat
-        # self.stat_file = stat_file
-        # with open(stat_file, 'r') as f:
-        #     self.stat = json.loads(f.read())
-        self.state_strs = list(self.stat.keys())
+    def __init__(self, rec_file, capacity=10):
+        self.rec_file = rec_file
+        self.capacity = capacity
+        with open(self.rec_file, 'r') as f:
+            rec_lines = f.readlines()
+        self.stat = {}
+        self.state_keys = []
+        for l in rec_lines:
+            rec = l.strip()
+            state_key, step, total_step, result = state.parse_state_str_for_agent(rec)
+            occur = self.stat.get(state_key)
+            if occur is None:
+                occur = [result]
+                self.stat[state_key] = occur
+                self.state_keys.append(state_key)
+            else:
+                occur.append(result)
 
     def __getitem__(self, item):
-        state_str = self.state_strs[item]
-        stat_ = torch.tensor(self.stat[state_str]).sum(dim=0)
-        probs = stat_ / stat_.sum()
-        cid, color, next_turn, board_matrix = parse_state(state_str)
-        next_turn_id = color_str_to_id[next_turn]
-        return cid, color, next_turn_id, probs, board_matrix
+        state_str = self.state_keys[item]
+        stat_ = torch.tensor(self.stat[state_str])[-self.capacity:]
+        probs = stat_.sum(dim=0) / stat_.sum()
+        color_matrix, cid_matrix, next_turn = state.parse_state_str_for_model(state_str)
+        return cid_matrix, color_matrix, next_turn, probs
 
     def __len__(self):
-        return len(self.state_strs)
+        return len(self.state_keys)
+
 
 if __name__ == '__main__':
     stat_file = '/Users/zx/Documents/rl-exp/xiangqi/stat.json'

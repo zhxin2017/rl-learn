@@ -1,6 +1,5 @@
 
 import torch
-
 import agent
 import board
 import model
@@ -16,58 +15,47 @@ class Game:
     def agent_step(self):
         (src_row, src_col, dst_row, dst_col), prob = self.agent.exploit(self.board)
         self.board.move(src_row, src_col, dst_row, dst_col)
-        return src_row, src_col, dst_row, dst_col, prob
+        return prob
 
     def person_step(self):
         move_str = input('input move str:\n')
         src_row, src_col, dst_row, dst_col = (int(s) for s in move_str)
         self.board.move(src_row, src_col, dst_row, dst_col)
-        return src_row, src_col, dst_row, dst_col
 
     def play(self, mode='aa'):
         while True:
             print('-------------------')
             if mode[0] == 'a':
-                src_row, src_col, dst_row, dst_col, prob = self.agent_step()
-                self.board.show_board(src_row, src_col, dst_row, dst_col)
-                print(f'{self.board.pos_to_piece[(dst_row, dst_col)].get_char()} {src_row}{src_col}'
-                      f'---->{dst_row}{dst_col} win prob {prob:.4f}')
+                prob = self.agent_step()
+                self.board.show_board()
+                print(f'win prob {prob:.4f}')
                 result = self.board.get_result()
-                if result != 'draw':
-                    print(result)
-                    break
             else:
-                src_row, src_col, dst_row, dst_col = self.person_step()
-                self.board.show_board(src_row, src_col, dst_row, dst_col)
+                self.person_step()
+                self.board.show_board()
                 result = self.board.get_result()
-                if result != 'draw':
-                    print(result)
-                    break
             print('-------------------')
             if mode[1] == 'a':
-                src_row, src_col, dst_row, dst_col, prob = self.agent_step()
-                self.board.show_board(src_row, src_col, dst_row, dst_col)
-                print(f'{self.board.pos_to_piece[(dst_row, dst_col)].get_char()} {src_row}{src_col}'
-                      f'---->{dst_row}{dst_col} win prob {prob:.4f}')
+                prob = self.agent_step()
+                self.board.show_board()
+                print(f'win prob {prob:.4f}')
                 result = self.board.get_result()
-                if result != 'draw':
-                    print(result)
-                    break
             else:
-                src_row, src_col, dst_row, dst_col = self.person_step()
-                self.board.show_board(src_row, src_col, dst_row, dst_col)
+                self.person_step()
+                self.board.show_board()
                 result = self.board.get_result()
-                if result != 'draw':
-                    print(result)
-                    break
+            if result != 'going':
+                print(result)
+                break
 
 
 if __name__ == '__main__':
     # first_turn = int(sys.argv[1])
     model_ = model.Evaluator(20, 512)
     device = torch.device('mps')
-    model_.load_state_dict(torch.load('resources/evaluator.5.pt', map_location=device))
+    model_.load_state_dict(torch.load('resources/evaluator.1.pt', map_location=device))
     model_.to(device)
     agent_ = agent.Agent(model_, device=device)
     game = Game(agent_, next_turn='red', me_color='black')
+    game.board.show_board()
     game.play(mode='aa')
