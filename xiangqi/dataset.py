@@ -4,12 +4,6 @@ import state
 import torch
 
 
-def unparse_state(next_turn, board_matrix):
-    board_matrix = board_matrix.reshape(-1)
-    state = ''.join(['0' * (1 - b // 10) + str(b) for b in board_matrix]) + '|' + next_turn
-    return state
-
-
 # def flip_board(state_str):
 #     cid, color, next_turn, board_matrix = parse_state(state_str)
 
@@ -45,10 +39,7 @@ class Ds(Dataset):
 
 
 if __name__ == '__main__':
-    stat_file = '/Users/zx/Documents/rl-exp/xiangqi/stat.json'
+    stat_file = '/Users/zx/Documents/rl-exp/xiangqi/resources/rec.txt'
     ds = Ds(stat_file)
     for category, color, next_turn, probs in ds:
-        print(category.shape)
-        print(color.shape)
-        print(probs.shape)
-        print(next_turn)
+        print(probs)

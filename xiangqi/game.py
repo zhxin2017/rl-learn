@@ -13,7 +13,7 @@ class Game:
 
 
     def agent_step(self):
-        (src_row, src_col, dst_row, dst_col), prob = self.agent.exploit(self.board)
+        (src_row, src_col, dst_row, dst_col), prob = self.agent.exploit(self.board, try_kill=False)
         self.board.move(src_row, src_col, dst_row, dst_col)
         return prob
 
@@ -34,6 +34,9 @@ class Game:
                 self.person_step()
                 self.board.show_board()
                 result = self.board.get_result()
+            if result != 'going':
+                print(result)
+                break
             print('-------------------')
             if mode[1] == 'a':
                 prob = self.agent_step()
@@ -53,9 +56,9 @@ if __name__ == '__main__':
     # first_turn = int(sys.argv[1])
     model_ = model.Evaluator(20, 512)
     device = torch.device('mps')
-    model_.load_state_dict(torch.load('resources/evaluator.1.pt', map_location=device))
+    model_.load_state_dict(torch.load('resources/evaluator.55.pt', map_location=device))
     model_.to(device)
     agent_ = agent.Agent(model_, device=device)
-    game = Game(agent_, next_turn='red', me_color='black')
+    game = Game(agent_, next_turn='red', me_color='red')
     game.board.show_board()
     game.play(mode='aa')

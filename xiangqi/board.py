@@ -161,35 +161,27 @@ class Board:
             show += '\n'
         print(show)
 
-    def check_king_facing(self, moving_piece, dst_col):
-        if moving_piece.category != 'king':
-            if self.king_red.col != self.king_black.col:
-                return False
-            if moving_piece.col != self.king_red.col:
-                return False
-            if moving_piece.col == dst_col:
-                return False
+    def check_king_facing(self, moving_piece, dst_pos):
+        dst_row, dst_col = dst_pos
+        src_row, src_col = moving_piece.row, moving_piece.col
+        
+        removed, prev_last_move = self.move(src_row, src_col, dst_row, dst_col)
+        if removed is not None and removed.category == 'king':
+            self.restore(removed, prev_last_move)
+            return False
+        if self.king_black.col != self.king_red.col:
+            self.restore(removed, prev_last_move)
+            return False
 
-            min_row = min(self.king_red.row, self.king_black.row)
-            max_row = max(self.king_red.row, self.king_black.row)
-            n_blockade = 0
-            for i in range(min_row + 1, max_row):
-                if self.pos_to_piece[(i, self.king_red.col)] is not None:
-                    n_blockade += 1
-                    if n_blockade > 1:
-                        return False
-            return True
-        else:
-            if self.king_red.col == self.king_black.col:
+        min_row = min(self.king_red.row, self.king_black.row)
+        max_row = max(self.king_red.row, self.king_black.row)
+
+        for i in range(min_row + 1, max_row):
+            if self.pos_to_piece[(i, self.king_red.col)] is not None:
+                self.restore(removed, prev_last_move)
                 return False
-            if (moving_piece.color == 'red' and dst_col == self.king_black.col or
-                    moving_piece.color == 'black' and dst_col == self.king_red.col):
-                min_row = min(self.king_red.row, self.king_black.row)
-                max_row = max(self.king_red.row, self.king_black.row)
-                for i in range(min_row + 1, max_row):
-                    if self.pos_to_piece[(i, dst_col)] is not None:
-                        return False
-                return True
+        self.restore(removed, prev_last_move)
+        return True
 
     def feasible_moves(self):
         pieces = [p for p in self.pieces if p.color == self.next_turn]
@@ -392,8 +384,9 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color != piece.color:
-                                    piece_destinies.append(pos)
+                                else:
+                                    if piece__.color != piece.color:
+                                        piece_destinies.append(pos)
                                     break
                         break
 
@@ -409,8 +402,9 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color != piece.color:
-                                    piece_destinies.append(pos)
+                                else:
+                                    if piece__.color != piece.color:
+                                        piece_destinies.append(pos)
                                     break
                         break
 
@@ -426,8 +420,9 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color != piece.color:
-                                    piece_destinies.append(pos)
+                                else:
+                                    if piece__.color != piece.color:
+                                        piece_destinies.append(pos)
                                     break
                         break
                 # search lower
@@ -442,8 +437,9 @@ class Board:
                                 piece__ = self.pos_to_piece[pos]
                                 if piece__ is None:
                                     continue
-                                if piece__.color != piece.color:
-                                    piece_destinies.append(pos)
+                                else:
+                                    if piece__.color != piece.color:
+                                        piece_destinies.append(pos)
                                     break
                         break
 
@@ -472,7 +468,7 @@ class Board:
                 for pos in pos_:
                     if self.pos_to_piece[pos] is None or self.pos_to_piece[pos].color != piece.color:
                         piece_destinies.append(pos)
-            piece_destinies = [dst_pos for dst_pos in piece_destinies if not self.check_king_facing(piece, dst_pos[1])]
+            piece_destinies = [dst_pos for dst_pos in piece_destinies if not self.check_king_facing(piece, dst_pos)]
             all_destinies.append(piece_destinies)
 
         pieces = [pc for i, pc in enumerate(pieces) if len(all_destinies[i]) > 0]
@@ -483,6 +479,7 @@ class Board:
     def move(self, src_row, src_col, dst_row, dst_col):
         src_piece = self.pos_to_piece[(src_row, src_col)]
         dst_piece = self.pos_to_piece[(dst_row, dst_col)]
+        # print((dst_row, dst_col))
         self.color_matrix[dst_row, dst_col] = src_piece.get_color_id()
         self.cid_matrix[dst_row, dst_col] = src_piece.get_cid()
         self.color_matrix[src_row, src_col] = 2
@@ -521,6 +518,11 @@ class Board:
             self.cid_matrix[dst_row, dst_col] = removed_piece.get_cid()
             self.color_matrix[dst_row, dst_col] = removed_piece.get_color_id()
             self.pieces.append(removed_piece)
+            if removed_piece.category == 'king':
+                if removed_piece.color == 'red':
+                    self.king_red = removed_piece
+                else:
+                    self.king_black = removed_piece
         else:
             self.cid_matrix[dst_row, dst_col] = 0
             self.color_matrix[dst_row, dst_col] = 2

@@ -59,12 +59,16 @@ for i in range(train_cnt):
         continue
     print(f'playing {i + 1}')
 
-    rec_file = f'{folder}/rec.json'
-    epsilon = .95**i if i < 30 else .2
-    max_depth = 3 + (i + 1) // 2
-    play_cnt = 2000
-    sub_epoch = 2
-    agent_ = agent.Agent(model=model_, epsilon=epsilon, rec_file=rec_file, device=device)
+    rec_file = f'{folder}/rec.txt'
+    epsilon = .98**i if i + 1 <= 40 else .4
+    epsilon_decay = 1 if i + 1 == 1 else .99
+    num_last_step = i + 1
+    if i + 1 == 1:
+        play_cnt = 10000
+    else:
+        play_cnt = 100
+    sub_epoch = 4 if i + 1 <= 3 else 2
+    agent_ = agent.Agent(model=model_, epsilon=epsilon, rec_file=rec_file, num_last_step=num_last_step, device=device)
 
     replay_ratio = .3 if len(agent_.rec) > 0 else 0
     for j in range(play_cnt):
@@ -77,8 +81,7 @@ for i in range(train_cnt):
         if board_.get_result() != 'going':
             continue
         game_uuid = uuid.uuid1().hex
-        agent_.self_play(board_, show_board=False, game_uuid=game_uuid)
-
+        agent_.self_play(board_, show_board=False, game_uuid=game_uuid, epsilon_decay=epsilon_decay)
     agent_.save_rec()
 
     print(f'training #{i + 1}/{train_cnt}')
