@@ -51,7 +51,8 @@ class Node:
 
             v = W / self.N 
             values.append(v + u)
-            visits.append(subnode.N**(1 / tem) / total_visit_)
+            if self_play:
+                visits.append(subnode.N**(1 / tem) / total_visit_)
         if self_play:
             a = random.choices(list(range(len(self.subnodes))), weights=visits, k=1)[0]
         else:
@@ -59,6 +60,7 @@ class Node:
         return a
     
     def backup(self):
+        self.N = 1
         W_update = self.W
         node = self.supnode
         while node is not None:
@@ -75,11 +77,6 @@ def search(root: Node, evaluator, search_num=180):
             game_result = node.board_.get_result()
             # terminal state
             if game_result != 'going':
-                if game_result == 'red':
-                    node.W = 1
-                elif game_result == 'black':
-                    node.W = -1
-                node.N = 1
                 node.backup()
                 break
 
@@ -100,11 +97,20 @@ def search(root: Node, evaluator, search_num=180):
                         cids = torch.tensor(cids).view(1, 10, 9)
                         next_turn = 0 if new_board.next_turn == 'red' else 1
                         next_turn = torch.tensor([[next_turn]])
-                        with torch.no_grad():
-                            W = evaluator(cids, next_turn)
                         new_node = Node(new_board, move_by=(src_row, src_col, dst_row, dst_col))
-                        new_node.W = W[0].item()
-                        new_node.N = 1
+                        game_result =  new_board.get_result()
+                        if game_result != 'going':
+                            if game_result == 'red':
+                                W = 1
+                            elif game_result == 'black':
+                                W = -1
+                            else:
+                                W = 0
+                        else:
+                            with torch.no_grad():
+                                W = evaluator(cids, next_turn)[0].item()
+
+                        new_node.W = W
                         new_node.supnode = node
                         node.subnodes.append(new_node)
                 break

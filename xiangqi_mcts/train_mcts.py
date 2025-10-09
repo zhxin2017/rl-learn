@@ -1,9 +1,11 @@
 import random
 import torch.nn
 import uuid
+import os
 import board
 import model
 import mcts
+import numpy as np
 import dataset
 from torch import optim
 from torch.utils.data import DataLoader, Dataset
@@ -43,12 +45,40 @@ def self_play(play_num, search_num):
 
 
 class XQDataset(Dataset):
-    def __init__(self, cid_matrices, next_turns, win_probs):
+    def __init__(self, cid_matrices, next_turns, win_probs, aug=False):
         super().__init__()
         self.cid_matrices = cid_matrices
         self.next_turns = next_turns
         self.win_probs = win_probs
-    
+        if aug:
+            cid_matrices_flip = []
+            next_turns_flip = []
+            win_probs_flip = []
+            for i, m in enumerate(cid_matrices):
+                cid_matrices_flip.append(np.flip(m, axis=1).copy())
+                next_turns_flip.append(next_turns[i])
+                win_probs_flip.append(win_probs[i])
+                cid_matrices_flip.append(np.flip(m, axis=0).copy())
+                next_turns_flip.append(next_turns[i])
+                win_probs_flip.append(win_probs[i])
+            cid_matrices_switch = []
+            next_turns_switch = []
+            win_probs_switch = []
+            for i, m in enumerate(cid_matrices):
+                cid_black_mask = m > 7
+                cid_red_mask = (m > 0) * (1 - cid_black_mask)
+                cid_matrix_red = cid_black_mask * m - 7
+                cid_matrix_black = cid_red_mask * m + 7
+                cid_matrices_switch.append(cid_matrix_red + cid_matrix_black)
+                next_turns_switch.append(1 - next_turns[i])
+                win_probs_switch.append(-win_probs[i])
+            self.cid_matrices.extend(cid_matrices_flip)
+            self.cid_matrices.extend(cid_matrices_switch)
+            self.next_turns.extend(next_turns_flip)
+            self.next_turns.extend(next_turns_switch)
+            self.win_probs.extend(win_probs_flip)
+            self.win_probs.extend(win_probs_switch)
+
     def __getitem__(self, index):
         return self.cid_matrices[index], self.next_turns[index], self.win_probs[index]
     
@@ -57,14 +87,26 @@ class XQDataset(Dataset):
 
 
 train_num = 1000
-buffer_size = 10
+buffer_size = 1
 batch_size = 16
 
+ckpts = os.listdir('ckpt')
+ckpts = [f for f in ckpts if f.endswith('.pt')]
+if len(ckpts) == 0:
+    start_num = 0
+else:
+    indices = [int(f[10:].split('.')[0]) for f in ckpts]
+    start_num = max(indices)
+    evaluator.load_state_dict(torch.load(f'ckpt/evaluator_{start_num}.pt'))
+
 for i in range(train_num):
-    epoch = max(int(8 * 0.5**i), 1)
-    search_num = min(int(2 + i**0.5), 180)
+    if i < start_num:
+        continue
+    # epoch = max(int(8 * 0.5**i), 1)
+    epoch = 1
+    search_num = min(int(1 + i), 180)
     cid_matrices, next_turns, win_probs = self_play(buffer_size, search_num)
-    xq_dataset = XQDataset(cid_matrices, next_turns, win_probs)
+    xq_dataset = XQDataset(cid_matrices, next_turns, win_probs, aug=True)
     xq_dataloader = DataLoader(xq_dataset, batch_size=batch_size, shuffle=True)
     for e in range(epoch):
         for cid_matrices_batch, next_turns_batch, win_probs_batch in xq_dataloader:
