@@ -4,11 +4,15 @@ import copy
 import board
 import random
 import torch
+import dataset
+from torch.utils.data import DataLoader
+
 
 class Node:
     def __init__(self, board_, move_by=None):
         self.N = 0
         self.W = 0
+        self.v = None
         self.move_by = move_by
         self.supnode = None
         self.subnodes = []
@@ -60,9 +64,8 @@ class Node:
         return a
     
     def backup(self):
-        self.N = 1
-        W_update = self.W
-        node = self.supnode
+        node = self
+        W_update = node.v
         while node is not None:
             node.W = node.W + W_update
             node.N = node.N + 1
@@ -73,6 +76,7 @@ def search(root: Node, evaluator, search_num=180):
     for i in range(search_num):
         print(f'tree search step {i + 1}')
         node = root
+        node.v = 0
         while True:
             game_result = node.board_.get_result()
             # terminal state
@@ -85,18 +89,21 @@ def search(root: Node, evaluator, search_num=180):
                 node = node.subnodes[a]
             else:
                 # backup
-                node.N = 1
                 node.backup()
                 # expand and evaluate
+
+                cid_matrices = []
+                next_turns = []
+
                 for i, (src_row, src_col) in enumerate(node.board_.feasible_srcs):
                     for dst_row, dst_col in node.board_.feasible_dsts[i]:
                         new_board = copy.deepcopy(node.board_)
                         new_board.move(src_row, src_col, dst_row, dst_col)
                         # new_board.show_board()
-                        cids = new_board.get_cid_matrix()
-                        cids = torch.tensor(cids).view(1, 10, 9)
+                        cid_matrix = new_board.get_cid_matrix()
+                        cid_matrices.append(cid_matrix)
                         next_turn = 0 if new_board.next_turn == 'red' else 1
-                        next_turn = torch.tensor([[next_turn]])
+                        next_turns.append(next_turn)
                         new_node = Node(new_board, move_by=(src_row, src_col, dst_row, dst_col))
                         game_result =  new_board.get_result()
                         if game_result != 'going':
@@ -106,11 +113,23 @@ def search(root: Node, evaluator, search_num=180):
                                 W = -1
                             else:
                                 W = 0
-                        else:
-                            with torch.no_grad():
-                                W = evaluator(cids, next_turn)[0].item()
+                            new_node.v = W
 
-                        new_node.W = W
                         new_node.supnode = node
                         node.subnodes.append(new_node)
+                
+                fake_win_probs = torch.zeros([len(cid_matrices), 1])
+                wins = []
+
+                ds = dataset.XQDataset(cid_matrices, next_turns, fake_win_probs)
+                dl = DataLoader(ds, batch_size=len(ds))
+                for cid_matrices_batch, next_turns_batch, _ in dl:
+                    with torch.no_grad():
+                        win_probs = evaluator(cid_matrices_batch, next_turns_batch)
+                    for win_prob in win_probs:
+                        wins.append(win_prob)
+
+                for i, subnode in enumerate(node.subnodes):
+                    if subnode.v is None:
+                        subnode.v = wins[i]
                 break
