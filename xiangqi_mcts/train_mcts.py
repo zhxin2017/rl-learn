@@ -31,8 +31,9 @@ def self_play(play_num, search_num):
             mcts.search(node, evaluator, search_num=search_num)
             print('tree search finished')
             cid_matrices.append(board_.get_cid_matrix())
-            next_turns.append(['red', 'black'].index(board_.next_turn))
-            win_probs.append(node.W / node.N)
+            turn = 0 if board_.next_turn == 'red' else 1
+            next_turns.append(turn)
+            win_probs.append(float(node.W / node.N))
             if board_.get_result() != 'going':
                 break
             a = node.select(self_play=True)
@@ -62,8 +63,8 @@ for i in range(train_num):
         continue
     # epoch = max(int(8 * 0.5**i), 1)
     epoch = 1
-    # search_num = min(int(60 + i), 160)
-    search_num = 2
+    search_num = min(int(60 + i), 160)
+    # search_num = 2
     cid_matrices, next_turns, win_probs = self_play(buffer_size, search_num)
     xq_dataset = dataset.XQDataset(cid_matrices, next_turns, win_probs, aug=True)
     xq_dataloader = DataLoader(xq_dataset, batch_size=batch_size, shuffle=True)

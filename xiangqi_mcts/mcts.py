@@ -11,8 +11,7 @@ from torch.utils.data import DataLoader
 class Node:
     def __init__(self, board_, move_by=None):
         self.N = 0
-        self.W = 0
-        self.v = None
+        self.W = None
         self.move_by = move_by
         self.supnode = None
         self.subnodes = []
@@ -34,9 +33,9 @@ class Node:
             total_visit += subnode.N
             total_visit_ += subnode.N**(1 / tem)
             if self.board_.next_turn == 'black':
-                W = subnode.W
-            else:
                 W = -subnode.W
+            else:
+                W = subnode.W
             W_sum = W_sum + np.exp(W)
         total_visit_sqrt = total_visit**0.5
         # print('showing boards of different actions')
@@ -45,14 +44,12 @@ class Node:
             # cnt += 1
             # print(cnt)
             # subnode.board_.show_board()
-            p = np.exp(subnode.W) / W_sum
-            u = C_puct * p * total_visit_sqrt / (1 + subnode.N)
-
             if self.board_.next_turn == 'black':
-                W = subnode.W
-            else:
                 W = -subnode.W
-
+            else:
+                W = subnode.W
+            p = np.exp(W) / W_sum
+            u = C_puct * p * total_visit_sqrt / (1 + subnode.N)
             v = W / self.N 
             values.append(v + u)
             if self_play:
@@ -65,7 +62,7 @@ class Node:
     
     def backup(self):
         node = self
-        W_update = node.v
+        W_update = node.W
         while node is not None:
             node.W = node.W + W_update
             node.N = node.N + 1
@@ -76,7 +73,7 @@ def search(root: Node, evaluator, search_num=180):
     for i in range(search_num):
         print(f'tree search step {i + 1}')
         node = root
-        node.v = 0
+        node.W = 0
         while True:
             game_result = node.board_.get_result()
             # terminal state
@@ -113,7 +110,7 @@ def search(root: Node, evaluator, search_num=180):
                                 W = -1
                             else:
                                 W = 0
-                            new_node.v = W
+                            new_node.W = W
 
                         new_node.supnode = node
                         node.subnodes.append(new_node)
@@ -130,6 +127,6 @@ def search(root: Node, evaluator, search_num=180):
                         wins.append(win_prob)
 
                 for i, subnode in enumerate(node.subnodes):
-                    if subnode.v is None:
-                        subnode.v = wins[i]
+                    if subnode.W is None:
+                        subnode.W = wins[i]
                 break
