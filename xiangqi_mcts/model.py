@@ -34,6 +34,7 @@ class Evaluator(nn.Module):
         for enc in self.encoder_layers:
             x = enc(x, x, x)
         result = self.result_reg(x[:, -1])
+        result = (torch.sigmoid(result) - 0.5) * 2
         return result
 
 

@@ -55,6 +55,7 @@ class Node:
             if self_play:
                 visits.append(subnode.N**(1 / tem) / total_visit_)
         if self_play:
+            # print(f'select action with prob {visits}')
             a = random.choices(list(range(len(self.subnodes))), weights=visits, k=1)[0]
         else:
             a = np.argmax(values)
@@ -71,7 +72,7 @@ class Node:
 
 def search(root: Node, evaluator, search_num=180):
     for i in range(search_num):
-        print(f'tree search step {i + 1}')
+        # print(f'tree search step {i + 1}')
         node = root
         node.W = 0
         while True:
