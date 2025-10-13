@@ -25,7 +25,7 @@ class Node:
         total_visit_ = 0
         W_sum = 0
         if self_play and self.board_.step > 30:
-            tem = 1e04
+            tem = 0.2
         else:
             tem = 1
 
@@ -36,7 +36,7 @@ class Node:
                 W = -subnode.W
             else:
                 W = subnode.W
-            W_sum = W_sum + np.exp(W)
+            W_sum = W_sum + np.exp(W * 1.0)
         total_visit_sqrt = total_visit**0.5
         # print('showing boards of different actions')
         # cnt = 0
