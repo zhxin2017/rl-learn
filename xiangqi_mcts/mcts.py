@@ -48,7 +48,7 @@ class Node:
                 W = -subnode.W
             else:
                 W = subnode.W
-            p = np.exp(W) / W_sum
+            p = np.exp(W * 1.0) / W_sum
             u = C_puct * p * total_visit_sqrt / (1 + subnode.N)
             v = W / self.N 
             values.append(v + u)

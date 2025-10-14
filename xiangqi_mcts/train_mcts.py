@@ -3,6 +3,7 @@ import torch.nn
 import time
 from collections import deque
 import os
+import pickle
 import board
 import model
 import mcts
@@ -53,9 +54,14 @@ batch_size = 32
 buffer_size = 5000
 num_game_per_iter = 5
 
-cid_matrices_buffer = deque([], buffer_size)
-next_turns_buffer = deque([], buffer_size)
-win_probs_buffer = deque([], buffer_size)
+data_pickle = 'data/buffer.pkl'
+if os.path.exists(data_pickle):
+    with open(data_pickle, 'rb') as f:
+        cid_matrices_buffer, next_turns_buffer, win_probs_buffer = pickle.load(f)
+else:
+    cid_matrices_buffer = deque([], buffer_size)
+    next_turns_buffer = deque([], buffer_size)
+    win_probs_buffer = deque([], buffer_size)
 
 ckpts = os.listdir('ckpt')
 ckpts = [f for f in ckpts if f.endswith('.pt')]
@@ -77,6 +83,10 @@ for i in range(train_num):
     cid_matrices_buffer.extend(cid_matrices)
     next_turns_buffer.extend(next_turns)
     win_probs_buffer.extend(win_probs)
+
+    with open(data_pickle, 'wb') as f:
+        pickle.dump((cid_matrices_buffer, next_turns_buffer, win_probs_buffer), f)
+    
     xq_dataset = dataset.XQDataset(cid_matrices_buffer, next_turns_buffer, win_probs_buffer, aug=True)
     xq_dataloader = DataLoader(xq_dataset, batch_size=batch_size, shuffle=True)
     for e in range(epoch):
