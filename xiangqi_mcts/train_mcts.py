@@ -37,7 +37,7 @@ def self_play(play_num, search_num, iter_cnt):
             cid_matrices.append(board_.get_cid_matrix())
             turn = 0 if board_.next_turn == 'red' else 1
             next_turns.append(turn)
-            win_probs.append(float(node.W / node.N))
+            win_probs.append(float(node.W / (node.N + 1)))
             if board_.get_result() != 'going':
                 break
             a = node.select(self_play=True)
@@ -51,8 +51,8 @@ def self_play(play_num, search_num, iter_cnt):
 
 train_num = 10000
 batch_size = 32
-buffer_size = 5000
-num_game_per_iter = 5
+buffer_size = 10000
+num_game_per_iter = 1
 
 data_pickle = 'data/buffer.pkl'
 if os.path.exists(data_pickle):
@@ -76,8 +76,8 @@ for i in range(train_num):
     if i < start_num:
         continue
     # epoch = max(int(8 * 0.5**i), 1)
-    epoch = 5
-    search_num = min(int(60 + i), 150)
+    epoch = 1
+    search_num = min(int(80 + i), 150)
     # search_num = 2
     cid_matrices, next_turns, win_probs = self_play(num_game_per_iter, search_num, i + 1)
     cid_matrices_buffer.extend(cid_matrices)
@@ -91,12 +91,12 @@ for i in range(train_num):
     xq_dataloader = DataLoader(xq_dataset, batch_size=batch_size, shuffle=True)
     for e in range(epoch):
         for b, (cid_matrices_batch, next_turns_batch, win_probs_batch) in enumerate(xq_dataloader):
-            print(f'training using replay buffer, iter {i + 1}, epoch {e + 1}, batch {b + 1}')
             pred_probs = evaluator(cid_matrices_batch, next_turns_batch)
             loss = loss_fn(pred_probs.view(-1), win_probs_batch.to(torch.float32))
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-    if (i + 1) % 5 == 0:
+            print(f'training using replay buffer, iter {i + 1}, epoch {e + 1}, batch {b + 1}, loss {loss.item():.4f}')
+    if (i + 1) % 1 == 0:
         torch.save(evaluator.state_dict(), f'ckpt/evaluator_{i + 1}.pt')
     

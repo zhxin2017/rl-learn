@@ -16,9 +16,9 @@ class Node:
         self.supnode = None
         self.subnodes = []
         self.board_: board.Board = board_
+        self.W_delta = 0
 
-
-    def select(self, C_puct=5, self_play=False):
+    def select(self, C_puct=3, self_play=False):
         values = []
         visits = []
         total_visit = 0
@@ -29,13 +29,17 @@ class Node:
         else:
             tem = 1
 
-        for subnode in self.subnodes:
+        kill_moves = []
+
+        for i, subnode in enumerate(self.subnodes):
             total_visit += subnode.N
             total_visit_ += subnode.N**(1 / tem)
             if self.board_.next_turn == 'black':
                 W = -subnode.W
             else:
                 W = subnode.W
+            if subnode.board_.get_result() != 'going':
+                kill_moves.append(i)
             W_sum = W_sum + np.exp(W * 1.0)
         total_visit_sqrt = total_visit**0.5
         # print('showing boards of different actions')
@@ -50,12 +54,13 @@ class Node:
                 W = subnode.W
             p = np.exp(W * 1.0) / W_sum
             u = C_puct * p * total_visit_sqrt / (1 + subnode.N)
-            v = W / self.N 
+            v = W / (1 + subnode.N)
             values.append(v + u)
             if self_play:
                 visits.append(subnode.N**(1 / tem) / total_visit_)
         if self_play:
-            # print(f'select action with prob {visits}')
+            print(f'select action with prob {visits}')
+            print(f'prob with kill moves are: {[visits[i] for i in kill_moves]}')
             a = random.choices(list(range(len(self.subnodes))), weights=visits, k=1)[0]
         else:
             a = np.argmax(values)
@@ -63,18 +68,18 @@ class Node:
     
     def backup(self):
         node = self
-        W_update = node.W
+        W_delta = self.W_delta
         while node is not None:
-            node.W = node.W + W_update
+            node.W = node.W + W_delta
             node.N = node.N + 1
             node = node.supnode
 
 
 def search(root: Node, evaluator, search_num=180):
+    root.W = 0
     for i in range(search_num):
         # print(f'tree search step {i + 1}')
         node = root
-        node.W = 0
         while True:
             game_result = node.board_.get_result()
             # terminal state
@@ -112,6 +117,7 @@ def search(root: Node, evaluator, search_num=180):
                             else:
                                 W = 0
                             new_node.W = W
+                            new_node.W_delta = W
 
                         new_node.supnode = node
                         node.subnodes.append(new_node)
@@ -130,4 +136,5 @@ def search(root: Node, evaluator, search_num=180):
                 for i, subnode in enumerate(node.subnodes):
                     if subnode.W is None:
                         subnode.W = wins[i]
+                        subnode.W_delta = wins[i]
                 break
