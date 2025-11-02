@@ -55,10 +55,3 @@ class XQDataset(Dataset):
     
     def __len__(self):
         return len(self.cid_matrices)
-
-
-if __name__ == '__main__':
-    stat_file = '/Users/zx/Documents/rl-exp/xiangqi/resources/rec.txt'
-    ds = Ds(stat_file)
-    for category, color, next_turn, probs in ds:
-        print(probs)

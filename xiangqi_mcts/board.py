@@ -532,7 +532,7 @@ class Board:
             num_move += len(moves_p)
         if num_move == 0:
             return 'red' if self.next_turn == 'black' else 'black'
-        if self.step >= 120:
+        if self.step >= 100:
             return 'draw'
         return 'going'
 
