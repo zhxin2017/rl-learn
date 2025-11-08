@@ -160,9 +160,9 @@ class Board:
         dst_row, dst_col = dst_pos
         src_row, src_col = src_pos
         
-        removed = self.move(src_row, src_col, dst_row, dst_col, leave_feasible=True)
+        removed = self.move(src_row, src_col, dst_row, dst_col, update_feasible=False)
         if removed.category == 'king':
-            self.restore(removed, src_row, src_col, dst_row, dst_col, leave_feasible=True)
+            self.restore(removed, src_row, src_col, dst_row, dst_col, update_feasible=False)
             return False
 
         king1_row, king1_col = -1, -1
@@ -180,15 +180,15 @@ class Board:
                     break
         
         if king1_col != king2_col:
-            self.restore(removed, src_row, src_col, dst_row, dst_col, leave_feasible=True)
+            self.restore(removed, src_row, src_col, dst_row, dst_col, update_feasible=False)
             return False
 
         for i in range(king1_row + 1, king2_row):
             if self.board[i][king1_col].category != 'none':
-                self.restore(removed, src_row, src_col, dst_row, dst_col, leave_feasible=True)
+                self.restore(removed, src_row, src_col, dst_row, dst_col, update_feasible=False)
                 return False
-        
-        self.restore(removed, src_row, src_col, dst_row, dst_col, leave_feasible=True)
+
+        self.restore(removed, src_row, src_col, dst_row, dst_col, update_feasible=False)
         return True
 
     def get_feasible_moves(self):
@@ -480,25 +480,25 @@ class Board:
 
         return all_sources, all_destinies
 
-    def move(self, src_row, src_col, dst_row, dst_col, leave_feasible=False):
+    def move(self, src_row, src_col, dst_row, dst_col, update_feasible=True):
         src_piece = self.board[src_row][src_col]
         dst_piece = self.board[dst_row][dst_col]
         self.board[dst_row][dst_col] = src_piece
         self.board[src_row][src_col] = Piece('none', 'none')
         removed = dst_piece
         self.shift_turn()
-        if not leave_feasible:
+        if update_feasible:
             self.feasible_srcs, self.feasible_dsts = self.get_feasible_moves()
         self.step += 1
         return removed 
 
-    def restore(self, removed_piece, src_row, src_col, dst_row, dst_col, leave_feasible=False):
+    def restore(self, removed_piece, src_row, src_col, dst_row, dst_col, update_feasible=True):
         moved_piece = self.board[dst_row][dst_col]
         self.board[src_row][src_col] = moved_piece
         self.board[dst_row][dst_col] = removed_piece
         self.shift_turn()
         self.step -= 1
-        if not leave_feasible:
+        if update_feasible:
             self.feasible_srcs, self.feasible_dsts = self.get_feasible_moves()
             
 

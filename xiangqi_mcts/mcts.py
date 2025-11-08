@@ -11,61 +11,61 @@ from torch.utils.data import DataLoader
 class Node:
     def __init__(self, board_, move_by=None):
         self.N = 0
-        self.W = None
+        self.W = 0
+        self.P = 0
         self.move_by = move_by
         self.supnode = None
         self.subnodes = []
         self.board_: board.Board = board_
         self.W_delta = 0
 
-    def select(self, C_puct=3, self_play=False):
+    def select_mcts(self, C_puct=5):
         values = []
-        visits = []
         total_visit = 0
-        total_visit_ = 0
-        W_sum = 0
-        if self_play and self.board_.step > 30:
-            tem = 0.2
-        else:
-            tem = 1
 
-        kill_moves = []
-
-        for i, subnode in enumerate(self.subnodes):
+        for subnode in self.subnodes:
             total_visit += subnode.N
-            total_visit_ += subnode.N**(1 / tem)
-            if self.board_.next_turn == 'black':
-                W = -subnode.W
-            else:
-                W = subnode.W
-            if subnode.board_.get_result() != 'going':
-                kill_moves.append(i)
-            W_sum = W_sum + np.exp(W * 1.0)
-        total_visit_sqrt = total_visit**0.5
+
+        total_visit_sqrt = max(total_visit**0.5, 1e-5)
         # print('showing boards of different actions')
         # cnt = 0
         for subnode in self.subnodes:
-            # cnt += 1
-            # print(cnt)
-            # subnode.board_.show_board()
             if self.board_.next_turn == 'black':
                 W = -subnode.W
             else:
                 W = subnode.W
-            p = np.exp(W * 1.0) / W_sum
-            u = C_puct * p * total_visit_sqrt / (1 + subnode.N)
-            v = W / (1 + subnode.N)
-            values.append(v + u)
-            if self_play:
-                visits.append(subnode.N**(1 / tem) / total_visit_)
-        if self_play:
-            print(f'select action with prob {visits}')
-            print(f'prob with kill moves are: {[visits[i] for i in kill_moves]}')
-            a = random.choices(list(range(len(self.subnodes))), weights=visits, k=1)[0]
-        else:
-            a = np.argmax(values)
+            U = C_puct * subnode.P * total_visit_sqrt / (1 + subnode.N)
+            Q = W / (subnode.N + 1e-5)
+            values.append(Q + U)
+        a = np.argmax(values)
         return a
     
+    def select_play(self):
+        if self.board_.step > 30:
+            tem = 0.2
+        else:
+            tem = 1
+        
+        total_visit_with_temp = 0
+        total_visit = 0
+        visits_with_temp = []
+        visits = []
+    
+        kill_moves = []
+        for i, subnode in enumerate(self.subnodes):
+            total_visit_with_temp += subnode.N**(1 / tem)
+            total_visit += subnode.N
+        for i, subnode in enumerate(self.subnodes):
+            visits_with_temp.append(subnode.N**(1 / tem) / total_visit_with_temp)
+            visits.append(subnode.N / total_visit)
+            if subnode.board_.get_result() != 'going':
+                kill_moves.append(i)
+        print(f'select action with prob {visits_with_temp}')
+        print(f'prob with kill moves are: {[visits_with_temp[i] for i in kill_moves]}')
+        a = random.choices(list(range(len(self.subnodes))), weights=visits_with_temp, k=1)[0]
+        return a, visits
+
+
     def backup(self):
         node = self
         W_delta = self.W_delta
@@ -76,7 +76,7 @@ class Node:
 
 
 def search(root: Node, evaluator, search_num=180):
-    root.W = 0
+    # root.W = 0
     for i in range(search_num):
         # print(f'tree search step {i + 1}')
         node = root
@@ -84,57 +84,45 @@ def search(root: Node, evaluator, search_num=180):
             game_result = node.board_.get_result()
             # terminal state
             if game_result != 'going':
+                if game_result == 'red':
+                    if node.board_.next_turn == 'red':
+                        node.W_delta = -1
+                    else:
+                        node.W_delta = 1
+                elif game_result == 'black':
+                    if node.board_.next_turn == 'black':
+                        node.W_delta = 1
+                    else:
+                        node.W_delta = -1
+                else:  # draw
+                    node.W_delta = 0
                 node.backup()
                 break
 
             if len(node.subnodes) > 0:  # select
-                a = node.select()
+                a = node.select_mcts()
                 node = node.subnodes[a]
             else:
-                # backup
-                node.backup()
-                # expand and evaluate
+                cid_matrix = torch.tensor([node.board_.get_cid_matrix()])
+                next_turn = 0 if node.board_.next_turn == 'red' else 1
+                next_turn = torch.tensor([next_turn])
+                with torch.no_grad():
+                    win_prob, act_logits = evaluator(cid_matrix, next_turn)
 
-                cid_matrices = []
-                next_turns = []
+                act_dist = torch.softmax(act_logits, dim=-1)
 
                 for i, (src_row, src_col) in enumerate(node.board_.feasible_srcs):
+                    src_idx = src_row * 9 + src_col
                     for dst_row, dst_col in node.board_.feasible_dsts[i]:
+                        dst_idx = dst_row * 9 + dst_col
+                        prob = float(act_dist[0][src_idx * 90 + dst_idx])
                         new_board = copy.deepcopy(node.board_)
                         new_board.move(src_row, src_col, dst_row, dst_col)
                         # new_board.show_board()
-                        cid_matrix = new_board.get_cid_matrix()
-                        cid_matrices.append(cid_matrix)
-                        next_turn = 0 if new_board.next_turn == 'red' else 1
-                        next_turns.append(next_turn)
                         new_node = Node(new_board, move_by=(src_row, src_col, dst_row, dst_col))
-                        game_result =  new_board.get_result()
-                        if game_result != 'going':
-                            if game_result == 'red':
-                                W = 1
-                            elif game_result == 'black':
-                                W = -1
-                            else:
-                                W = 0
-                            new_node.W = W
-                            new_node.W_delta = W
-
+                        new_node.P = prob
                         new_node.supnode = node
                         node.subnodes.append(new_node)
-                
-                fake_win_probs = torch.zeros([len(cid_matrices), 1])
-                wins = []
-
-                ds = dataset.XQDataset(cid_matrices, next_turns, fake_win_probs)
-                dl = DataLoader(ds, batch_size=len(ds))
-                for cid_matrices_batch, next_turns_batch, _ in dl:
-                    with torch.no_grad():
-                        win_probs = evaluator(cid_matrices_batch, next_turns_batch)
-                    for win_prob in win_probs:
-                        wins.append(win_prob)
-
-                for i, subnode in enumerate(node.subnodes):
-                    if subnode.W is None:
-                        subnode.W = wins[i]
-                        subnode.W_delta = wins[i]
+                node.W_delta = float(win_prob[0])
+                node.backup()
                 break

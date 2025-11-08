@@ -19,6 +19,9 @@ class Evaluator(nn.Module):
             encoder_layer = tsfm.Block(dmodel, dhead)
             self.encoder_layers.append(encoder_layer)
         self.result_reg = nn.Linear(dmodel, 1)
+        self.act_proj = nn.Linear(dmodel, 64)
+        self.act_relu = nn.ReLU()
+        self.act_reg = nn.Linear(64 * 90, 90 * 90)
 
     def forward(self, cids, next_turn):
         b = cids.shape[0]
@@ -35,17 +38,19 @@ class Evaluator(nn.Module):
             x = enc(x, x, x)
         result = self.result_reg(x[:, -1])
         result = (torch.sigmoid(result) - 0.5) * 2
-        return result
+        act = self.act_relu(self.act_proj(x[:, :90]))
+        act = act.view(b, -1)
+        act_logits = self.act_reg(act)
+        return result, act_logits
 
 
 if __name__ == '__main__':
     import dataset
     from torch.utils.data import DataLoader
-    from tqdm import tqdm
 
     stat_file = '/Users/zx/Documents/rl-exp/xiangqi/stat.0.json'
     ds = dataset.Ds(stat_file)
     dl = DataLoader(ds, batch_size=2)
     model_ = Evaluator(24, 512, 64)
-    for category, color, next_turn, probs in tqdm(dl):
+    for category, color, next_turn, probs in dl:
         probs_pred = model_(category, color, next_turn)
