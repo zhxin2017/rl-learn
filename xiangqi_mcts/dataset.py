@@ -10,16 +10,22 @@ import torch
 
 def flip(cid_matrix, visit_dist):
     # Flip the board horizontally
-    visit_dist_matrix = visit_dist.reshape(90, 90)
+    # visit_dist_matrix = visit_dist.reshape(90, 90)
     cid_matrix_flip_hor = np.flip(cid_matrix, axis=1).copy()
     cid_matrix_flip_ver = np.flip(cid_matrix, axis=0).copy()
     cid_matrix_flip_hor_ver = np.flip(cid_matrix_flip_hor, axis=0).copy()
-    visit_dist_flip_hor = np.flip(visit_dist_matrix, axis=1).copy()
-    visit_dist_flip_ver = np.flip(visit_dist_matrix, axis=0).copy()
-    visit_dist_flip_hor_ver = np.flip(visit_dist_flip_hor, axis=0).copy()
-    visit_dist_flip_hor = visit_dist_flip_hor.flatten()
-    visit_dist_flip_ver = visit_dist_flip_ver.flatten()
-    visit_dist_flip_hor_ver = visit_dist_flip_hor_ver.flatten()
+    board_indices = np.arange(90).reshape(10, 9)
+    board_indices_flip_hor = np.flip(board_indices, axis=1).copy().reshape(90, 1)
+    board_indices_flip_ver = np.flip(board_indices, axis=0).copy().reshape(90, 1)
+    board_indices_flip_hor_ver = np.flip(board_indices_flip_hor, axis=0).copy().reshape(90, 1)
+
+    visit_indices_flip_hor = (board_indices_flip_hor @ board_indices_flip_hor.T).flatten()
+    visit_indices_flip_ver = (board_indices_flip_ver @ board_indices_flip_ver.T).flatten()
+    visit_indices_flip_hor_ver = (board_indices_flip_hor_ver @ board_indices_flip_hor_ver.T).flatten()
+
+    visit_dist_flip_hor = visit_dist[visit_indices_flip_hor]
+    visit_dist_flip_ver = visit_dist[visit_indices_flip_ver]
+    visit_dist_flip_hor_ver = visit_dist[visit_indices_flip_hor_ver]
     cid_matrix_aug = [cid_matrix_flip_hor, cid_matrix_flip_ver, cid_matrix_flip_hor_ver]
     visit_dist_aug = [visit_dist_flip_hor, visit_dist_flip_ver, visit_dist_flip_hor_ver]
     return cid_matrix_aug, visit_dist_aug

@@ -41,7 +41,7 @@ class Node:
         return a
     
     def select_play(self):
-        if self.board_.step > 30:
+        if self.board_.step > 50:
             tem = 0.2
         else:
             tem = 1
@@ -109,20 +109,23 @@ def search(root: Node, evaluator, search_num=180):
                 with torch.no_grad():
                     win_prob, act_logits = evaluator(cid_matrix, next_turn)
 
-                act_dist = torch.softmax(act_logits, dim=-1)
+                act_logits_ = []
 
                 for i, (src_row, src_col) in enumerate(node.board_.feasible_srcs):
                     src_idx = src_row * 9 + src_col
                     for dst_row, dst_col in node.board_.feasible_dsts[i]:
                         dst_idx = dst_row * 9 + dst_col
-                        prob = float(act_dist[0][src_idx * 90 + dst_idx])
+                        act_logits_.append(act_logits[0][src_idx * 90 + dst_idx])
                         new_board = copy.deepcopy(node.board_)
                         new_board.move(src_row, src_col, dst_row, dst_col)
                         # new_board.show_board()
                         new_node = Node(new_board, move_by=(src_row, src_col, dst_row, dst_col))
-                        new_node.P = prob
                         new_node.supnode = node
                         node.subnodes.append(new_node)
+                act_logits_ = torch.stack(act_logits_)
+                act_dist = torch.softmax(act_logits_, dim=-1)
+                for i, new_node in enumerate(node.subnodes):
+                    new_node.P = act_dist[i].item()
                 node.W_delta = float(win_prob[0])
                 node.backup()
                 break

@@ -70,14 +70,16 @@ def self_play(play_num, search_num, iter_cnt):
             board_.move(src_row, src_col, dst_row, dst_col)
             print(f'iter {iter_cnt}, self-playing of game {1}, step {board_.step}, choosing action {a}')
             board_.show_board(src_row, src_col, dst_row, dst_col)
+        
+        # if outcome == 0:
+        #     print(f'iter {iter_cnt}, self-playing game {1} ended with a draw')
+        #     i -= 1
+        #     continue
 
         cid_matrices.extend(cid_matrices_per_game)
         next_turns.extend(next_turns_per_game)
-        if initial_next_turn == 'red':
-            outcome = -outcome
         for i in range(len(cid_matrices_per_game)):
             outcomes.append(outcome)
-            outcome = -outcome
         visit_dists.extend(visit_dists_per_game)
 
     print('self play finished')
@@ -87,7 +89,7 @@ def self_play(play_num, search_num, iter_cnt):
 train_num = 10000
 batch_size = 32
 buffer_size = 10000
-num_game_per_iter = 1
+num_game_per_iter = 20
 
 data_pickle = 'data/buffer.pkl'
 if os.path.exists(data_pickle):
@@ -136,7 +138,7 @@ for i in range(train_num):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            print(f'training using replay buffer, iter {i + 1}, epoch {e + 1}, batch {b + 1}, loss {loss.item():.4f}')
+            print(f'training using replay buffer, iter {i + 1}, epoch {e + 1}, batch {b + 1}, policy loss {policy_loss.item():.4f}, value loss {value_loss.item():.4f}, total loss {loss.item():.4f}')
     if (i + 1) % 1 == 0:
         torch.save(evaluator_main.state_dict(), f'ckpt/evaluator_{i + 1}.pt')
     

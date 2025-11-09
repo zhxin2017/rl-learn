@@ -19,9 +19,10 @@ class Evaluator(nn.Module):
             encoder_layer = tsfm.Block(dmodel, dhead)
             self.encoder_layers.append(encoder_layer)
         self.result_reg = nn.Linear(dmodel, 1)
-        self.act_proj = nn.Linear(dmodel, 64)
+        self.act_proj = nn.Linear(dmodel, 32)
         self.act_relu = nn.ReLU()
-        self.act_reg = nn.Linear(64 * 90, 90 * 90)
+        # self.act_reg = nn.Linear(32 * 90, 90 * (16 + 18 + 4 + 4 + 4)) # 左右16, 上下18, 马4, 象4, 士4
+        self.act_reg = nn.Linear(32 * 90, 90 * 90) # 左右16, 上下18, 马4, 象4, 士4
 
     def forward(self, cids, next_turn):
         b = cids.shape[0]
