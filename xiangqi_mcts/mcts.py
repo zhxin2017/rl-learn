@@ -19,14 +19,14 @@ class Node:
         self.board_: board.Board = board_
         self.W_delta = 0
 
-    def select_mcts(self, C_puct=5):
+    def select_mcts(self, C_puct=10):
         values = []
         total_visit = 0
 
         for subnode in self.subnodes:
             total_visit += subnode.N
 
-        total_visit_sqrt = max(total_visit**0.5, 1e-5)
+        total_visit_sqrt = total_visit**0.5
         # print('showing boards of different actions')
         # cnt = 0
         for subnode in self.subnodes:
@@ -42,7 +42,7 @@ class Node:
     
     def select_play(self):
         if self.board_.step > 50:
-            tem = 0.2
+            tem = 1
         else:
             tem = 1
         
@@ -85,15 +85,9 @@ def search(root: Node, evaluator, search_num=180):
             # terminal state
             if game_result != 'going':
                 if game_result == 'red':
-                    if node.board_.next_turn == 'red':
-                        node.W_delta = -1
-                    else:
-                        node.W_delta = 1
+                    node.W_delta = 1
                 elif game_result == 'black':
-                    if node.board_.next_turn == 'black':
-                        node.W_delta = 1
-                    else:
-                        node.W_delta = -1
+                    node.W_delta = -1
                 else:  # draw
                     node.W_delta = 0
                 node.backup()
