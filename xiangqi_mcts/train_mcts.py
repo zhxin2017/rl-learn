@@ -68,7 +68,7 @@ def self_play(play_num, search_num, iter_cnt):
             visit_dists_per_game.append(visits)
             src_row, src_col, dst_row, dst_col = node.subnodes[a].move_by
             board_.move(src_row, src_col, dst_row, dst_col)
-            print(f'iter {iter_cnt}, self-playing of game {1}, step {board_.step}, choosing action {a}')
+            print(f'iter {iter_cnt}, self-playing of game {i}, step {board_.step}, choosing action {a}')
             board_.show_board(src_row, src_col, dst_row, dst_col)
         
         # if outcome == 0:
@@ -78,7 +78,7 @@ def self_play(play_num, search_num, iter_cnt):
 
         cid_matrices.extend(cid_matrices_per_game)
         next_turns.extend(next_turns_per_game)
-        for i in range(len(cid_matrices_per_game)):
+        for _ in range(len(cid_matrices_per_game)):
             outcomes.append(outcome)
         visit_dists.extend(visit_dists_per_game)
 
@@ -89,7 +89,7 @@ def self_play(play_num, search_num, iter_cnt):
 train_num = 10000
 batch_size = 32
 buffer_size = 10000
-num_game_per_iter = 20
+num_game_per_iter = 5
 
 data_pickle = 'data/buffer.pkl'
 if os.path.exists(data_pickle):
@@ -116,7 +116,7 @@ for i in range(train_num):
         continue
     # epoch = max(int(8 * 0.5**i), 1)
     epoch = 1
-    search_num = 200
+    search_num = 300
     # search_num = 2
     cid_matrices, next_turns, outcomes, visit_dists = self_play(num_game_per_iter, search_num, i + 1)
     cid_matrices_buffer.extend(cid_matrices)
