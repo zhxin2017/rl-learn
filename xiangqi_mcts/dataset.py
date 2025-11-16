@@ -39,21 +39,24 @@ def switch(cid_matrix, next_turn, outcome):
 
 
 class XQDataset(Dataset):
-    def __init__(self, cid_matrices, next_turns, outcomes, visit_dists, aug=False):
+    def __init__(self, cid_matrices, next_turns, outcomes, visit_dists, visit_update_mask, aug=False):
         super().__init__()
         self.cid_matrices = cid_matrices
         self.next_turns = next_turns
         self.outcomes = outcomes
         self.visit_dists = visit_dists
+        self.visit_update_mask = visit_update_mask
         if aug:
             cid_matrices_aug = []
             next_turns_aug = []
             outcomes_aug = []
             visit_dists_aug = []
+            visit_update_mask_aug = []
             for i, m in enumerate(cid_matrices):
                 cid_matrices_flip_aug, visits_flip_aug = flip(m, visit_dists[i])
                 cid_matrices_aug.extend(cid_matrices_flip_aug)
                 visit_dists_aug.extend(visits_flip_aug)
+                visit_update_mask_aug.extend([visit_update_mask[i]] * 3)
                 next_turns_aug.extend([next_turns[i]] * 3)
                 outcomes_aug.extend([outcomes[i]] * 3)
                 cid_matrix_switch, next_turn_switch, outcome_switch = switch(m, next_turns[i], outcomes[i])
@@ -61,19 +64,22 @@ class XQDataset(Dataset):
                 next_turns_aug.append(next_turn_switch)
                 outcomes_aug.append(outcome_switch)
                 visit_dists_aug.append(visit_dists[i])
+                visit_update_mask_aug.append(visit_update_mask[i])
                 cid_matrix_switch_flips, visit_dist_switch_flips = flip(cid_matrix_switch, visit_dists[i])
                 cid_matrices_aug.extend(cid_matrix_switch_flips)
                 next_turns_aug.extend([next_turn_switch] * 3)
                 outcomes_aug.extend([outcome_switch] * 3)
                 visit_dists_aug.extend(visit_dist_switch_flips)
+                visit_update_mask_aug.extend([visit_update_mask[i]] * 3)
 
             self.cid_matrices.extend(cid_matrices_aug)
             self.next_turns.extend(next_turns_aug)
             self.outcomes.extend(outcomes_aug)
             self.visit_dists.extend(visit_dists_aug)
+            self.visit_update_mask.extend(visit_update_mask_aug)
 
     def __getitem__(self, index):
-        return self.cid_matrices[index], self.next_turns[index], self.outcomes[index], self.visit_dists[index]
+        return self.cid_matrices[index], self.next_turns[index], self.outcomes[index], self.visit_dists[index], self.visit_update_mask[index]
 
     def __len__(self):
         return len(self.cid_matrices)

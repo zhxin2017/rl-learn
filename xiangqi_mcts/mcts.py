@@ -17,27 +17,30 @@ class Node:
         self.supnode = None
         self.subnodes = []
         self.board_: board.Board = board_
-        self.W_delta = 0
 
-    def select_mcts(self, C_puct=10):
+    def select_mcts(self, C_puct=5):
         values = []
-        total_visit = 0
-
-        for subnode in self.subnodes:
-            total_visit += subnode.N
+        visits = [subnode.N for subnode in self.subnodes]
+        probs = [subnode.P for subnode in self.subnodes]
+        results = [subnode.board_.get_result() for subnode in self.subnodes]
+        if 'red' in results or 'black' in results:
+            pass
+        if self.board_.next_turn == 'black':
+            Ws = [-subnode.W for subnode in self.subnodes]
+        else:
+            Ws = [subnode.W for subnode in self.subnodes]
+        total_visit = sum(visits)
 
         total_visit_sqrt = total_visit**0.5
         # print('showing boards of different actions')
         # cnt = 0
-        for subnode in self.subnodes:
-            if self.board_.next_turn == 'black':
-                W = -subnode.W
-            else:
-                W = subnode.W
-            U = C_puct * subnode.P * total_visit_sqrt / (1 + subnode.N)
-            Q = W / (subnode.N + 1e-5)
+        for i, subnode in enumerate(self.subnodes):
+            U = C_puct * probs[i] * total_visit_sqrt / (1 + subnode.N)
+            Q = Ws[i] / (subnode.N + 1e-5)
             values.append(Q + U)
         a = np.argmax(values)
+        if values[a] == 0:
+            a = np.argmax(probs)
         return a
     
     def select_play(self):
@@ -60,15 +63,16 @@ class Node:
             visits.append(subnode.N / total_visit)
             if subnode.board_.get_result() != 'going':
                 kill_moves.append(i)
-        print(f'select action with prob {visits_with_temp}')
+        # print(f'select action with prob {visits_with_temp}')
         print(f'prob with kill moves are: {[visits_with_temp[i] for i in kill_moves]}')
         a = random.choices(list(range(len(self.subnodes))), weights=visits_with_temp, k=1)[0]
         return a, visits
 
 
-    def backup(self):
-        node = self
-        W_delta = self.W_delta
+    def backup(self, W_delta):
+        self.W = self.W + W_delta
+        self.N = self.N + 1
+        node = self.supnode
         while node is not None:
             node.W = node.W + W_delta
             node.N = node.N + 1
@@ -85,12 +89,12 @@ def search(root: Node, evaluator, search_num=180):
             # terminal state
             if game_result != 'going':
                 if game_result == 'red':
-                    node.W_delta = 1
+                    W_delta = 1
                 elif game_result == 'black':
-                    node.W_delta = -1
+                    W_delta = -1
                 else:  # draw
-                    node.W_delta = 0
-                node.backup()
+                    W_delta = 0
+                node.backup(W_delta)
                 break
 
             if len(node.subnodes) > 0:  # select
@@ -105,21 +109,35 @@ def search(root: Node, evaluator, search_num=180):
 
                 act_logits_ = []
 
-                for i, (src_row, src_col) in enumerate(node.board_.feasible_srcs):
+                for j, (src_row, src_col) in enumerate(node.board_.feasible_srcs):
                     src_idx = src_row * 9 + src_col
-                    for dst_row, dst_col in node.board_.feasible_dsts[i]:
+                    for dst_row, dst_col in node.board_.feasible_dsts[j]:
                         dst_idx = dst_row * 9 + dst_col
-                        act_logits_.append(act_logits[0][src_idx * 90 + dst_idx])
                         new_board = copy.deepcopy(node.board_)
                         new_board.move(src_row, src_col, dst_row, dst_col)
-                        # new_board.show_board()
                         new_node = Node(new_board, move_by=(src_row, src_col, dst_row, dst_col))
                         new_node.supnode = node
+                        result = new_board.get_result()
+                        if result != 'going' and result != 'draw':
+                            if result == 'red':
+                                W_delta = 1
+                            else:
+                                W_delta = -1
+                            if result == node.board_.next_turn:
+                                logit = torch.tensor(1e10)
+                            else:
+                                logit = torch.tensor(-1e10)
+                        else:
+                            W_delta = 0
+                            logit = act_logits[0][src_idx * 90 + dst_idx]
+                        # logit = act_logits[0][src_idx * 90 + dst_idx]
+                        new_node.backup(W_delta)
+                        act_logits_.append(logit)
                         node.subnodes.append(new_node)
                 act_logits_ = torch.stack(act_logits_)
                 act_dist = torch.softmax(act_logits_, dim=-1)
                 for i, new_node in enumerate(node.subnodes):
                     new_node.P = act_dist[i].item()
-                node.W_delta = float(win_prob[0])
-                node.backup()
+                W_delta = float(win_prob[0])
+                node.backup(W_delta)
                 break

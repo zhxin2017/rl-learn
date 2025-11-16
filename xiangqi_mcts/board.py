@@ -18,6 +18,11 @@ class Board:
         else:
             self.init_board()
         self.feasible_srcs, self.feasible_dsts = self.get_feasible_moves()
+        self.src_row=None
+        self.src_col=None
+        self.dst_row=None
+        self.dst_col=None
+        self.board_str = self.to_str()
 
     def init_board(self):
         board = [[None for j in range(NCOL)] for i in range(NROW)]
@@ -128,7 +133,7 @@ class Board:
             str(self.step) + '|' + self.my_color
         return state_str
 
-    def show_board(self, src_row=None, src_col=None, dst_row=None, dst_col=None):
+    def to_str(self):
         show = ''
         context = '\x1b[6;30;42m'
         context_end = '\x1b[0m'
@@ -138,7 +143,7 @@ class Board:
             for j in range(NCOL):
                 piece = self.board[i][j]
                 if piece.category == 'none':
-                    if src_row is not None and i == src_row and j == src_col:
+                    if self.src_row is not None and i == self.src_row and j == self.src_col:
                         show += f'{context}　{context_end}'
                     else:
                         # show += '　'
@@ -148,13 +153,16 @@ class Board:
                         char = f'{CRED}{piece.get_char()}{CEND}'
                     else:
                         char = piece.get_char()
-                    if src_row is not None and i == dst_row and j == dst_col:
+                    if self.src_row is not None and i == self.dst_row and j == self.dst_col:
                         show += f'{context}{char}{context_end}'
                     else:
                         show += char
 
             show += '\n'
-        print(show)
+        return show
+    
+    def show_board(self):
+        print(self.board_str)
 
     def check_king_facing(self, src_pos, dst_pos):
         dst_row, dst_col = dst_pos
@@ -489,6 +497,11 @@ class Board:
         self.shift_turn()
         if update_feasible:
             self.feasible_srcs, self.feasible_dsts = self.get_feasible_moves()
+            self.src_row = src_row
+            self.src_col = src_col
+            self.dst_row = dst_row
+            self.dst_col = dst_col
+            self.board_str = self.to_str()
         self.step += 1
         return removed 
 
