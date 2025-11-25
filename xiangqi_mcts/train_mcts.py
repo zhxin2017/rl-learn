@@ -89,6 +89,8 @@ def self_play(play_num, main_search_num, oppo_search_num, iter_cnt):
             print(f'iter {iter_cnt}, self-playing of game {i}, step {board_.step}, choosing action {a}, with prob {visits_[a]:.4f}')
             board_.show_board()
         
+        print(visit_update_mask_per_game)
+        
         # if outcome == 0:
         #     print(f'iter {iter_cnt}, self-playing game {1} ended with a draw')
         #     i -= 1

@@ -22,7 +22,39 @@ class Board:
         self.src_col=None
         self.dst_row=None
         self.dst_col=None
-        self.board_str = self.to_str()
+    
+    def load_state(self, cid_matrix, next_turn):
+        self.next_turn = color_id_to_str[next_turn]
+        for i in range(NROW):
+            for j in range(NCOL):
+                cid = cid_matrix[i][j]
+                if cid == 0:
+                    color = 'none'
+                elif cid > 7:
+                    color = 'black'
+                    cid = cid - 7
+                else:
+                    color = 'red'
+                category = piece_cid_to_name[cid]
+                piece = Piece(color, category)
+                self.board[i][j] = piece
+        self.my_color = None
+        for i in range(3):
+            for j in range(3, 6):
+                if self.board[i][j].category == 'king':
+                    self.my_color = self.board[i][j].color
+                    break
+            if self.my_color is not None:
+                break
+        if self.my_color is None:
+            for i in range(7, 10):
+                for j in range(3, 6):
+                    if self.board[i][j].category == 'king':
+                        self.my_color = self.board[i][j].color
+                        break
+                if self.my_color is not None:
+                    break
+        self.feasible_srcs, self.feasible_dsts = self.get_feasible_moves()
 
     def init_board(self):
         board = [[None for j in range(NCOL)] for i in range(NROW)]
@@ -103,7 +135,7 @@ class Board:
         else:
             self.next_turn = 'red'
 
-    def load_state(self, state_str):
+    def load_state_from_string(self, state_str):
         split = state_str.split('|')
         cids = split[:-3]
         self.next_turn = split[-3]
@@ -153,7 +185,7 @@ class Board:
                         char = f'{CRED}{piece.get_char()}{CEND}'
                     else:
                         char = piece.get_char()
-                    if self.src_row is not None and i == self.dst_row and j == self.dst_col:
+                    if self.dst_row is not None and i == self.dst_row and j == self.dst_col:
                         show += f'{context}{char}{context_end}'
                     else:
                         show += char
@@ -162,6 +194,7 @@ class Board:
         return show
     
     def show_board(self):
+        self.board_str = self.to_str()
         print(self.board_str)
 
     def check_king_facing(self, src_pos, dst_pos):
@@ -501,7 +534,6 @@ class Board:
             self.src_col = src_col
             self.dst_row = dst_row
             self.dst_col = dst_col
-            self.board_str = self.to_str()
         self.step += 1
         return removed 
 
@@ -552,15 +584,26 @@ class Board:
 
 if __name__ == '__main__':
     import random
-    board = Board(my_color='black')
+    board = Board(my_color='black', next_turn='black')
+    board.move(9, 2, 7, 4)
     board.show_board()
-    for i in range(10):
-        print(f'========{board.step}==========')
-        srcs, dsts = board.get_feasible_moves()
-        src_idx = random.choice(range(len(srcs)))
-        src_row, src_col = srcs[src_idx]
-        dst_row, dst_col = random.choice(dsts[src_idx])
-        board.move(src_row, src_col, dst_row, dst_col)
-        board.show_board(src_row, src_col, dst_row, dst_col)
+    board.move(2, 1, 2, 4)
+    board.show_board()
+    board.move(9, 1, 7, 2)
+    board.show_board()
+    board.move(2, 4, 6, 4)
+    board.show_board()
+    board.move(9, 0, 9, 1)
+    board.show_board()
+
+    import copy
+    srcs, dsts = board.get_feasible_moves()
+    for i in range(len(srcs)):
+        src_row, src_col = srcs[i]
+        for dst_row, dst_col in dsts[i]:
+            board_ = copy.deepcopy(board)
+            board_.move(src_row, src_col, dst_row, dst_col)
+            print(f'Move from ({src_row}, {src_col}) to ({dst_row}, {dst_col}), result: {board_.get_result()}')
+            board_.show_board()
 
     

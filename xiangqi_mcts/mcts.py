@@ -1,7 +1,8 @@
 import numpy as np
 from typing import List
 import copy
-import board
+from board import Board
+import model
 import random
 import torch
 import dataset
@@ -10,15 +11,15 @@ from torch.utils.data import DataLoader
 
 class Node:
     def __init__(self, board_, move_by=None):
-        self.N = 0
+        self.N = 1
         self.W = 0
         self.P = 0
         self.move_by = move_by
         self.supnode = None
         self.subnodes = []
-        self.board_: board.Board = board_
+        self.board_: Board = board_
 
-    def select_mcts(self, C_puct=5):
+    def select_mcts(self, C_puct=1):
         values = []
         visits = [subnode.N for subnode in self.subnodes]
         probs = [subnode.P for subnode in self.subnodes]
@@ -34,10 +35,10 @@ class Node:
         total_visit_sqrt = total_visit**0.5
         # print('showing boards of different actions')
         # cnt = 0
-        for i, subnode in enumerate(self.subnodes):
-            U = C_puct * probs[i] * total_visit_sqrt / (1 + subnode.N)
-            Q = Ws[i] / (subnode.N + 1e-5)
-            values.append(Q + U)
+        Us = [C_puct * probs[i] * total_visit_sqrt / (1 + self.subnodes[i].N) for i in range(len(self.subnodes))]
+        Qs = [Ws[i] / (self.subnodes[i].N + 1e-5) for i in range(len(self.subnodes))]
+        values = [Qs[i] + Us[i] for i in range(len(self.subnodes))]
+
         a = np.argmax(values)
         if values[a] == 0:
             a = np.argmax(probs)
@@ -120,24 +121,39 @@ def search(root: Node, evaluator, search_num=180):
                         result = new_board.get_result()
                         if result != 'going' and result != 'draw':
                             if result == 'red':
-                                W_delta = 1
+                                node.W = 1
                             else:
-                                W_delta = -1
+                                node.W = -1
                             if result == node.board_.next_turn:
                                 logit = torch.tensor(1e10)
                             else:
                                 logit = torch.tensor(-1e10)
                         else:
-                            W_delta = 0
                             logit = act_logits[0][src_idx * 90 + dst_idx]
                         # logit = act_logits[0][src_idx * 90 + dst_idx]
-                        new_node.backup(W_delta)
                         act_logits_.append(logit)
                         node.subnodes.append(new_node)
                 act_logits_ = torch.stack(act_logits_)
                 act_dist = torch.softmax(act_logits_, dim=-1)
-                for i, new_node in enumerate(node.subnodes):
-                    new_node.P = act_dist[i].item()
+                for k, new_node in enumerate(node.subnodes):
+                    new_node.P = act_dist[k].item()
                 W_delta = float(win_prob[0])
                 node.backup(W_delta)
                 break
+
+
+if __name__ == '__main__':
+    board = Board(my_color='black', next_turn='black')
+    board.move(9, 0, 7, 0)
+    board.show_board()
+    board.move(2, 7, 9, 7)
+    board.show_board()
+    root = Node(board)
+    evaluator = model.Evaluator(n_layer=12, dmodel=160, dhead=5)
+    evaluator.load_state_dict(torch.load('ckpt/evaluator_2.pt'))
+    search(root, evaluator, search_num=200)
+    a, visits_ = root.select_play()
+    root.subnodes[a].board_.show_board()
+    pass
+    # board.move(9, 0, 9, 1)
+    # board.show_board()
