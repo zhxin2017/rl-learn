@@ -478,7 +478,7 @@ class Board:
                         if piece_.category == 'none':
                             piece_destinies.append((r, j))
                         else:
-                            if r < 8:
+                            if r < 9:
                                 for e in range(r + 1, NROW):
                                     piece__ = self.board[e][j]
                                     if piece__.category == 'none':

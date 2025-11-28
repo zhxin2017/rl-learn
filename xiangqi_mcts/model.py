@@ -22,7 +22,7 @@ class Evaluator(nn.Module):
         self.act_proj = nn.Linear(dmodel, 32)
         self.act_relu = nn.ReLU()
         # self.act_reg = nn.Linear(32 * 90, 90 * (16 + 18 + 4 + 4 + 4)) # 左右16, 上下18, 马4, 象4, 士4
-        self.act_reg = nn.Linear(32 * 90, 90 * 90) # 左右16, 上下18, 马4, 象4, 士4
+        self.act_reg = nn.Linear(32 * 92, 90 * 90) # 左右16, 上下18, 马4, 象4, 士4
 
     def forward(self, cids, next_turn):
         b = cids.shape[0]
@@ -39,7 +39,7 @@ class Evaluator(nn.Module):
             x = enc(x, x, x)
         result = self.result_reg(x[:, -1])
         result = (torch.sigmoid(result) - 0.5) * 2
-        act = self.act_relu(self.act_proj(x[:, :90]))
+        act = self.act_relu(self.act_proj(x))
         act = act.view(b, -1)
         act_logits = self.act_reg(act)
         return result, act_logits
