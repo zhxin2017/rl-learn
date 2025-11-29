@@ -144,13 +144,20 @@ def search(root: Node, evaluator, search_num=180):
 
 if __name__ == '__main__':
     board = Board(my_color='black', next_turn='black')
-    board.move(9, 0, 7, 0)
+    board.move(9, 3, 8, 4)
     board.show_board()
-    board.move(2, 7, 9, 7)
+    board.move(2, 1, 2, 4)
     board.show_board()
+    board.move(9, 0, 8, 0)
+    board.show_board()
+    board.move(2, 4, 6, 4)
+    board.show_board()
+    # board.move(8, 0, 9, 0)
+    # board.show_board()
+
     root = Node(board)
     evaluator = model.Evaluator(n_layer=12, dmodel=160, dhead=5)
-    evaluator.load_state_dict(torch.load('ckpt/evaluator_2.pt'))
+    evaluator.load_state_dict(torch.load('ckpt/evaluator_84.pt'))
     search(root, evaluator, search_num=200)
     a, visits_ = root.select_play()
     root.subnodes[a].board_.show_board()
