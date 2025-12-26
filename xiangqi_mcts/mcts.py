@@ -5,6 +5,7 @@ from board import Board
 import model
 import random
 import torch
+import actions
 import dataset
 from torch.utils.data import DataLoader
 
@@ -45,10 +46,10 @@ class Node:
         return a
     
     def select_play(self):
-        if self.board_.step > 50:
-            tem = 1
+        if self.board_.step < 100:
+            tem = 0.5
         else:
-            tem = 1
+            tem = np.abs(np.sin(np.pi / 2 * self.board_.step)) + 0.1
         
         total_visit_with_temp = 0
         total_visit = 0
@@ -65,7 +66,7 @@ class Node:
             if subnode.board_.get_result() != 'going':
                 kill_moves.append(i)
         # print(f'select action with prob {visits_with_temp}')
-        print(f'prob with kill moves are: {[visits_with_temp[i] for i in kill_moves]}')
+        # print(f'prob with kill moves are: {[visits_with_temp[i] for i in kill_moves]}')
         a = random.choices(list(range(len(self.subnodes))), weights=visits_with_temp, k=1)[0]
         return a, visits
 
@@ -102,19 +103,20 @@ def search(root: Node, evaluator, search_num=180):
                 a = node.select_mcts()
                 node = node.subnodes[a]
             else:
-                cid_matrix = torch.tensor([node.board_.get_cid_matrix()])
+                coords = torch.tensor([[[piece.row, piece.col] for piece in node.board_.pieces]])
+                isdeads = torch.tensor([[1 if piece.isdead else 0 for piece in node.board_.pieces]])
                 next_turn = 0 if node.board_.next_turn == 'red' else 1
                 next_turn = torch.tensor([next_turn])
                 with torch.no_grad():
-                    win_prob, act_logits = evaluator(cid_matrix, next_turn)
-
+                    win_prob, act_logits = evaluator(coords, next_turn, isdeads)
                 act_logits_ = []
-
                 for j, (src_row, src_col) in enumerate(node.board_.feasible_srcs):
-                    src_idx = src_row * 9 + src_col
                     for dst_row, dst_col in node.board_.feasible_dsts[j]:
-                        dst_idx = dst_row * 9 + dst_col
                         new_board = copy.deepcopy(node.board_)
+                        moving_piece = new_board.board[src_row][src_col]
+                        row_delta = dst_row - src_row
+                        col_delta = dst_col - src_col
+                        act_idx = actions.move2index[(moving_piece.id, row_delta, col_delta)]
                         new_board.move(src_row, src_col, dst_row, dst_col)
                         new_node = Node(new_board, move_by=(src_row, src_col, dst_row, dst_col))
                         new_node.supnode = node
@@ -129,8 +131,7 @@ def search(root: Node, evaluator, search_num=180):
                             else:
                                 logit = torch.tensor(-1e10)
                         else:
-                            logit = act_logits[0][src_idx * 90 + dst_idx]
-                        # logit = act_logits[0][src_idx * 90 + dst_idx]
+                            logit = act_logits[0][act_idx]
                         act_logits_.append(logit)
                         node.subnodes.append(new_node)
                 act_logits_ = torch.stack(act_logits_)

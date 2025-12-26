@@ -23,15 +23,14 @@ char_dict = {
 
 
 class Piece:
-    def __init__(self, color, category=None):
+    def __init__(self, color, category=None, row=-1, col=-1, id=0, isdead=0):
         self.color = color
         self.category = category
+        self.row = row
+        self.col = col
+        self.isdead = isdead
+        self.id = id
 
-    def get_cid(self):
-        cid = piece_category_to_cid[self.category]
-        if self.color == 'black' and cid != 0:
-            cid = cid + 7
-        return cid
 
     def get_char(self):
         return char_dict[self.color][self.category]

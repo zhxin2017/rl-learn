@@ -8,40 +8,72 @@ class Evaluator(nn.Module):
     def __init__(self, n_layer, dmodel=256, dhead=64):
         super().__init__()
         self.dmodel = dmodel
-        self.category_emb_m = nn.Embedding(15, dmodel)
-        self.color_emb_m = nn.Embedding(3, dmodel)
+        self.category_emb_m = nn.Embedding(7, dmodel)
+        self.color_emb_m = nn.Embedding(2, dmodel)
         self.row_emb_m = nn.Embedding(10, dmodel)
         self.col_emb_m = nn.Embedding(9, dmodel)
         self.turn_emb_m = nn.Embedding(2, dmodel)
         self.result_query_emb_m = nn.Embedding(1, dmodel)
+        self.isdead_emb_m = nn.Embedding(1, dmodel)
         self.encoder_layers = nn.ModuleList()
         for i in range(n_layer):
             encoder_layer = tsfm.Block(dmodel, dhead)
             self.encoder_layers.append(encoder_layer)
         self.result_reg = nn.Linear(dmodel, 1)
-        self.act_proj = nn.Linear(dmodel, 32)
-        self.act_relu = nn.ReLU()
-        # self.act_reg = nn.Linear(32 * 90, 90 * (16 + 18 + 4 + 4 + 4)) # 左右16, 上下18, 马4, 象4, 士4
-        self.act_reg = nn.Linear(32 * 92, 90 * 90) # 左右16, 上下18, 马4, 象4, 士4
 
-    def forward(self, cids, next_turn):
-        b = cids.shape[0]
+        self.act_linear = nn.ModuleList()
+
+        self.act_linear_ju = nn.Linear(dmodel, 34)
+        self.act_linear_ma = nn.Linear(dmodel, 8)
+        self.act_linear_xiang = nn.Linear(dmodel, 4)
+        self.act_linear_shi = nn.Linear(dmodel, 4)
+        self.act_linear_king = nn.Linear(dmodel, 4)
+        self.act_linear_pao = nn.Linear(dmodel, 34)
+        self.act_linear_zu = nn.Linear(dmodel, 4)
+        self.act_linear.append(self.act_linear_ju)
+        self.act_linear.append(self.act_linear_ju)
+        self.act_linear.append(self.act_linear_ma)
+        self.act_linear.append(self.act_linear_ma)
+        self.act_linear.append(self.act_linear_xiang)
+        self.act_linear.append(self.act_linear_xiang)
+        self.act_linear.append(self.act_linear_shi)
+        self.act_linear.append(self.act_linear_shi)
+        self.act_linear.append(self.act_linear_king)
+        self.act_linear.append(self.act_linear_pao)
+        self.act_linear.append(self.act_linear_pao)
+        self.act_linear.append(self.act_linear_zu)
+        self.act_linear.append(self.act_linear_zu)
+        self.act_linear.append(self.act_linear_zu)
+        self.act_linear.append(self.act_linear_zu)
+        self.act_linear.append(self.act_linear_zu)
+
+
+    def forward(self, coords, next_turns, isdeads):
+        b = coords.shape[0]
+        cids = torch.tensor([0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 6, 6, 6, 0, 0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 6, 6, 6], dtype=torch.int, device=coords.device).view(1, 32).repeat(b, 1)
+        colors = torch.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=torch.int, device=coords.device).view(1, 32).repeat(b, 1)
+        rows_emb = self.row_emb_m(coords[..., 0])
+        cols_emb = self.col_emb_m(coords[..., 1])
+        isdeads_emb = self.isdead_emb_m(torch.zeros(b, 32, dtype=torch.int, device=coords.device))
         category_emb = self.category_emb_m(cids)
-        row_emb = self.row_emb_m(torch.arange(10, device=cids.device)).view(1, 10, 1, self.dmodel)
-        col_emb = self.col_emb_m(torch.arange(9, device=cids.device)).view(1, 1, 9, self.dmodel)
-        x = category_emb + row_emb + col_emb
-        x = x.view(b, 90, -1)
-        result_query = (self.result_query_emb_m(torch.tensor([0], dtype=torch.int, device=cids.device)))
-        result_query = result_query.view(1, 1, self.dmodel).repeat(b, 1, 1)
-        next_turn_emb = self.turn_emb_m(next_turn).view(b, 1, self.dmodel)
+        colors_emb = self.color_emb_m(colors)
+        isdeads = isdeads.unsqueeze(-1)
+        x = category_emb + colors_emb + (rows_emb + cols_emb) * (1 - isdeads) + isdeads_emb * isdeads
+        result_query = self.result_query_emb_m(torch.zeros(b, 1, dtype=torch.int, device=coords.device))
+        # next_turn_emb = self.turn_emb_m(next_turns).view(b, 1, self.dmodel)
+        next_turns = next_turns.unsqueeze(-1)
+        next_turn_emb = self.turn_emb_m(next_turns)
         x = torch.concat([x, next_turn_emb, result_query], dim=1)
         for enc in self.encoder_layers:
             x = enc(x, x, x)
         result = self.result_reg(x[:, -1])
         result = (torch.sigmoid(result) - 0.5) * 2
-        act = self.act_relu(self.act_proj(x))
-        act = act.view(b, -1)
-        act_logits = self.act_reg(act)
+        action_logits = []
+        x = x[:, :-2].view(b, 2, 16, self.dmodel)[torch.arange(b), next_turns.view(b)]
+        for j in range(len(self.act_linear)):
+            act_logit = self.act_linear[j](x[:, j])
+            action_logits.append(act_logit)
+        act_logits = torch.cat(action_logits, dim=-1)
         return result, act_logits
 
 

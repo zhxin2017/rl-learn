@@ -1,15 +1,14 @@
 import numpy as np
 
 from piece import Piece
-import state
-from config import piece_cid_to_name, color_id_to_str
 
 NROW = 10
 NCOL = 9
 
 
 class Board:
-    def __init__(self, next_turn='red', state_str=None, my_color='red'):
+    def __init__(self, next_turn='red', state_str=None, my_color='red', maxstep=200):
+        self.maxstep = maxstep
         self.pieces = []
         self.my_color = my_color
         self.next_turn = next_turn
@@ -23,37 +22,32 @@ class Board:
         self.dst_row=None
         self.dst_col=None
     
-    def load_state(self, cid_matrix, next_turn):
-        self.next_turn = color_id_to_str[next_turn]
-        for i in range(NROW):
-            for j in range(NCOL):
-                cid = cid_matrix[i][j]
-                if cid == 0:
-                    color = 'none'
-                elif cid > 7:
-                    color = 'black'
-                    cid = cid - 7
-                else:
-                    color = 'red'
-                category = piece_cid_to_name[cid]
-                piece = Piece(color, category)
-                self.board[i][j] = piece
+    def load_state(self, coords, next_turn, isdeads):
+        # todo: pieces are not matched
+        self.pieces = []
+        board = [[Piece('none', 'none') for j in range(NCOL)] for i in range(NROW)]
+        self.next_turn = next_turn
+        categories = ['ju', 'ju', 'ma', 'ma', 'xiang', 'xiang', 'shi', 'shi', 'king', 
+                'pao', 'pao', 'zu', 'zu', 'zu', 'zu', 'zu'] * 2
+        for i, ((row, col), cate, isdead) in enumerate(zip(coords, categories, isdeads)):
+            if i < 16:
+                color = 'red'
+                pid = i
+            else:
+                color = 'black'
+                pid = i - 16
+
+            piece = Piece(color, cate, row, col, pid, isdead)
+            self.pieces.append(piece)
+            if isdead:
+                continue
+            board[row][col] = piece
+        self.board = board
         self.my_color = None
-        for i in range(3):
-            for j in range(3, 6):
-                if self.board[i][j].category == 'king':
-                    self.my_color = self.board[i][j].color
-                    break
-            if self.my_color is not None:
-                break
-        if self.my_color is None:
-            for i in range(7, 10):
-                for j in range(3, 6):
-                    if self.board[i][j].category == 'king':
-                        self.my_color = self.board[i][j].color
-                        break
-                if self.my_color is not None:
-                    break
+        if self.pieces[8].row > 2:
+            self.my_color = 'red'
+        else:
+            self.my_color = 'black'
         self.feasible_srcs, self.feasible_dsts = self.get_feasible_moves()
 
     def init_board(self):
@@ -72,61 +66,115 @@ class Board:
             row_pao_red = 2
             row_zu_black = 6
             row_zu_red = 3
-        board[row_ju_black][0] = Piece('black', 'ju')
-        board[row_ju_black][1] = Piece('black', 'ma')
-        board[row_ju_black][2] = Piece('black', 'xiang')
-        board[row_ju_black][3] = Piece('black', 'shi')
-        board[row_ju_black][4] = Piece('black', 'king')
-        board[row_ju_black][5] = Piece('black', 'shi')
-        board[row_ju_black][6] = Piece('black', 'xiang')
-        board[row_ju_black][7] = Piece('black', 'ma')
-        board[row_ju_black][8] = Piece('black', 'ju')
 
-        board[row_ju_red][0] = Piece('red', 'ju')
-        board[row_ju_red][1] = Piece('red', 'ma')
-        board[row_ju_red][2] = Piece('red', 'xiang')
-        board[row_ju_red][3] = Piece('red', 'shi')
-        board[row_ju_red][4] = Piece('red', 'king')
-        board[row_ju_red][5] = Piece('red', 'shi')
-        board[row_ju_red][6] = Piece('red', 'xiang')
-        board[row_ju_red][7] = Piece('red', 'ma')
-        board[row_ju_red][8] = Piece('red', 'ju')
+        red_ju1 = Piece('red', 'ju', row=row_ju_red, col=0, id=0)
+        board[row_ju_red][0] = red_ju1
+        red_ju2 = Piece('red', 'ju', row=row_ju_red, col=8, id=1)
+        board[row_ju_red][8] = red_ju2
+        red_ma1 = Piece('red', 'ma', row=row_ju_red, col=1, id=2)
+        board[row_ju_red][1] = red_ma1
+        red_ma2 = Piece('red', 'ma', row=row_ju_red, col=7, id=3)
+        board[row_ju_red][7] = red_ma2
+        red_xiang1 = Piece('red', 'xiang', row=row_ju_red, col=2, id=4)
+        board[row_ju_red][2] = red_xiang1
+        red_xiang2 = Piece('red', 'xiang', row=row_ju_red, col=6, id=5)
+        board[row_ju_red][6] = red_xiang2
+        red_shi1 = Piece('red', 'shi', row=row_ju_red, col=3, id=6)
+        board[row_ju_red][3] = red_shi1
+        red_shi2 = Piece('red', 'shi', row=row_ju_red, col=5, id=7)
+        board[row_ju_red][5] = red_shi2
+        red_king = Piece('red', 'king', row=row_ju_red, col=8)
+        board[row_ju_red][4] = red_king
+        red_pao1 = Piece('red', 'pao', row=row_pao_red, col=1, id=9)
+        board[row_pao_red][1] = red_pao1
+        red_pao2 = Piece('red', 'pao', row=row_pao_red, col=7, id=10)
+        board[row_pao_red][7] = red_pao2
+        red_zu1 = Piece('red', 'zu', row=row_zu_red, col=0, id=11)
+        board[row_zu_red][0] = red_zu1
+        red_zu2 = Piece('red', 'zu', row=row_zu_red, col=2, id=12)
+        board[row_zu_red][2] = red_zu2
+        red_zu3 = Piece('red', 'zu', row=row_zu_red, col=4, id=13)
+        board[row_zu_red][4] = red_zu3
+        red_zu4 = Piece('red', 'zu', row=row_zu_red, col=6, id=14)
+        board[row_zu_red][6] = red_zu4
+        red_zu5 = Piece('red', 'zu', row=row_zu_red, col=8, id=15)
+        board[row_zu_red][8] = red_zu5
 
-        board[row_pao_black][1] = Piece('black', 'pao')
-        board[row_pao_black][7] = Piece('black', 'pao')
+        black_ju1 = Piece('black', 'ju', row=row_ju_black, col=0, id=0)
+        board[row_ju_black][0] = black_ju1
+        black_ju2 = Piece('black', 'ju', row=row_ju_black, col=8, id=1)
+        board[row_ju_black][8] = black_ju2
+        black_ma1 = Piece('black', 'ma', row=row_ju_black, col=1, id=2)
+        board[row_ju_black][1] = black_ma1
+        black_ma2 = Piece('black', 'ma', row=row_ju_black, col=7, id=3)
+        board[row_ju_black][7] = black_ma2
+        black_xiang1 = Piece('black', 'xiang', row=row_ju_black, col=2, id=4)
+        board[row_ju_black][2] = black_xiang1
+        black_xiang2 = Piece('black', 'xiang', row=row_ju_black, col=6, id=5)
+        board[row_ju_black][6] = black_xiang2
+        black_shi1 = Piece('black', 'shi', row=row_ju_black, col=3, id=6)
+        board[row_ju_black][3] = black_shi1
+        black_shi2 = Piece('black', 'shi', row=row_ju_black, col=5, id=7)
+        board[row_ju_black][5] = black_shi2
+        black_king = Piece('black', 'king', row=row_ju_black, col=4, id=8)
+        board[row_ju_black][4] = black_king
+        black_pao1 = Piece('black', 'pao', row=row_pao_black, col=1, id=9)
+        board[row_pao_black][1] = black_pao1
+        black_pao2 = Piece('black', 'pao', row=row_pao_black, col=7, id=10)
+        board[row_pao_black][7] = black_pao2
+        black_zu1 = Piece('black', 'zu', row=row_zu_black, col=0, id=11)
+        board[row_zu_black][0] = black_zu1
+        black_zu2 = Piece('black', 'zu', row=row_zu_black, col=2, id=12)
+        board[row_zu_black][2] = black_zu2
+        black_zu3 = Piece('black', 'zu', row=row_zu_black, col=4, id=13)
+        board[row_zu_black][4] = black_zu3
+        black_zu4 = Piece('black', 'zu', row=row_zu_black, col=6, id=14)
+        board[row_zu_black][6] = black_zu4
+        black_zu5 = Piece('black', 'zu', row=row_zu_black, col=8, id=15)
+        board[row_zu_black][8] = black_zu5
 
-        board[row_pao_red][1] = Piece('red', 'pao')
-        board[row_pao_red][7] = Piece('red', 'pao')
+        self.pieces.append(red_ju1)
+        self.pieces.append(red_ju2)
+        self.pieces.append(red_ma1)
+        self.pieces.append(red_ma2)
+        self.pieces.append(red_xiang1)
+        self.pieces.append(red_xiang2)
+        self.pieces.append(red_shi1)
+        self.pieces.append(red_shi2)
+        self.pieces.append(red_king)
+        self.pieces.append(red_pao1)
+        self.pieces.append(red_pao2)
+        self.pieces.append(red_zu1)
+        self.pieces.append(red_zu2)
+        self.pieces.append(red_zu3)
+        self.pieces.append(red_zu4)
+        self.pieces.append(red_zu5)
 
-        board[row_zu_black][0] = Piece('black', 'zu')
-        board[row_zu_black][2] = Piece('black', 'zu')
-        board[row_zu_black][4] = Piece('black', 'zu')
-        board[row_zu_black][6] = Piece('black', 'zu')
-        board[row_zu_black][8] = Piece('black', 'zu')
-
-        board[row_zu_red][0] = Piece('red', 'zu')
-        board[row_zu_red][2] = Piece('red', 'zu')
-        board[row_zu_red][4] = Piece('red', 'zu')
-        board[row_zu_red][6] = Piece('red', 'zu')
-        board[row_zu_red][8] = Piece('red', 'zu')
+        self.pieces.append(black_ju1)
+        self.pieces.append(black_ju2)
+        self.pieces.append(black_ma1)
+        self.pieces.append(black_ma2)
+        self.pieces.append(black_xiang1)
+        self.pieces.append(black_xiang2)
+        self.pieces.append(black_shi1)
+        self.pieces.append(black_shi2)
+        self.pieces.append(black_king)
+        self.pieces.append(black_pao1)
+        self.pieces.append(black_pao2)
+        self.pieces.append(black_zu1)
+        self.pieces.append(black_zu2)
+        self.pieces.append(black_zu3)
+        self.pieces.append(black_zu4)
+        self.pieces.append(black_zu5)
 
         for i in range(NROW):
             for j in range(NCOL):
                 if board[i][j] is None:
                     board[i][j] = Piece('none', 'none')
-        
         self.board = board
     
         self.last_move = None
         self.step = 0
-
-
-    def get_cid_matrix(self):
-        cid_matrix = np.zeros([10, 9], dtype=int)
-        for i in range(NROW):
-            for j in range(NCOL):
-                cid_matrix[i, j] = self.board[i][j].get_cid()
-        return cid_matrix
 
 
     def shift_turn(self):
@@ -135,35 +183,6 @@ class Board:
         else:
             self.next_turn = 'red'
 
-    def load_state_from_string(self, state_str):
-        split = state_str.split('|')
-        cids = split[:-3]
-        self.next_turn = split[-3]
-        self.step = int(split[-2])
-        self.my_color = split[-1]
-
-        for i in range(NROW):
-            for j in range(NCOL):
-                cid = int(cids[i * NCOL + j])
-                if cid == 0:
-                    color = 'none'
-                elif cid > 7:
-                    color = 'black'
-                    cid = cid - 7
-                else:
-                    color = 'red'
-                category = piece_cid_to_name[cid]
-                piece = Piece(color, category)
-                self.board[i][j] = piece
-
-    def dump_state(self):
-        # board state_str format: color|cid|next_turn|last_move
-        cid_matrix = self.get_cid_matrix()
-        cid_matrix_ = [str(n) for n in cid_matrix.reshape(-1).tolist()]
-        cid_matrix_str = '|'.join(cid_matrix_)
-        state_str = cid_matrix_str + '|' + self.next_turn + '|' + \
-            str(self.step) + '|' + self.my_color
-        return state_str
 
     def to_str(self):
         show = ''
@@ -525,8 +544,12 @@ class Board:
         src_piece = self.board[src_row][src_col]
         dst_piece = self.board[dst_row][dst_col]
         self.board[dst_row][dst_col] = src_piece
+        src_piece.row = dst_row
+        src_piece.col = dst_col
         self.board[src_row][src_col] = Piece('none', 'none')
         removed = dst_piece
+        if removed.category != 'none':
+            removed.isdead = 1
         self.shift_turn()
         if update_feasible:
             self.feasible_srcs, self.feasible_dsts = self.get_feasible_moves()
@@ -540,7 +563,11 @@ class Board:
     def restore(self, removed_piece, src_row, src_col, dst_row, dst_col, update_feasible=True):
         moved_piece = self.board[dst_row][dst_col]
         self.board[src_row][src_col] = moved_piece
+        moved_piece.row = src_row
+        moved_piece.col = src_col
         self.board[dst_row][dst_col] = removed_piece
+        if removed_piece.category != 'none':
+            removed_piece.isdead = 0
         self.shift_turn()
         self.step -= 1
         if update_feasible:
@@ -548,36 +575,17 @@ class Board:
             
 
     def get_result(self):
-        king_is_dead = True
-        for i in range(3):
-            for j in range(3, 6):
-                if self.board[i][j].category == 'king':
-                    king_is_dead = False
-                    break
-        if king_is_dead:
-            if self.my_color == 'red':
-                return 'red'
-            else:
-                return 'black'
-        
-        king_is_dead = True
-        for i in range(7, 10):
-            for j in range(3, 6):
-                if self.board[i][j].category == 'king':
-                    king_is_dead = False
-                    break
-        if king_is_dead:
-            if self.my_color == 'red':
-                return 'black'
-            else:
-                return 'red'
+        if self.pieces[8].isdead:
+            return 'black'
+        if self.pieces[24].isdead:
+            return 'red'
 
         num_move = 0
         for moves_p in self.feasible_dsts:
             num_move += len(moves_p)
         if num_move == 0:
             return 'red' if self.next_turn == 'black' else 'black'
-        if self.step >= 200:
+        if self.step >= self.maxstep:
             return 'draw'
         return 'going'
 
